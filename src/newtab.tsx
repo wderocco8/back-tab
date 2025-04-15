@@ -1,13 +1,13 @@
 import { useState } from "react"
 
-import "./style.css"
+import "./styles/globals.css"
 
 function IndexNewtab() {
   const [data, setData] = useState("")
 
   return (
     <div
-      className="new-tab"
+      // className="new-tab"
       style={{
         padding: 16,
         display: "flex",

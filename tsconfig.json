@@ -8,12 +8,10 @@
     "./**/*.ts",
     "./**/*.tsx"
   ],
+  "baseUrl": ".",
   "compilerOptions": {
     "paths": {
-      "~*": [
-        "./src/*"
-      ]
-    },
-    "baseUrl": "."
+      "@/*": ["./src/*"]
+    }
   }
 }

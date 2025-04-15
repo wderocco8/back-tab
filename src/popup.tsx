@@ -1,5 +1,6 @@
 import { useState } from "react"
-import "./style.css"
+import "./styles/globals.css"
+import { Button } from "./components/ui/button"
 
 function IndexPopup() {
   const [data, setData] = useState("")
@@ -7,6 +8,7 @@ function IndexPopup() {
   return (
     <div className="p-4 text-center bg-blue-500 text-white rounded-lg shadow-md">
       Hello from Tailwind!
+      <Button>Let's go</Button>
     </div>
     // <div
     //   style={{
