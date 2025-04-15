@@ -6,9 +6,9 @@ function IndexPopup() {
   const [data, setData] = useState("")
 
   return (
-    <div className="p-4 text-center bg-blue-500 text-white rounded-lg shadow-md">
+    <div className="p-4 text-center">
       Hello from Tailwind!
-      <Button>Let's go</Button>
+      <Button variant="destructive">Let's go</Button>
     </div>
     // <div
     //   style={{
