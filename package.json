@@ -37,7 +37,11 @@
       "https://*/*"
     ],
     "permissions": [
-      "tabs"
+      "tabs",
+      "sessions",
+      "history",
+      "scripting",
+      "webNavigation"
     ]
   }
 }
