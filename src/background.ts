@@ -1,51 +1,14 @@
+import { Graph } from "./graph"
+
 export {}
 
-// import { onMessage } from "@plasmohq/messaging"
-// import { Graph } from "./graph" // your custom graph class
-
-// const graph = new Graph()
-
-// // When a tab is created
-// chrome.tabs.onCreated.addListener((tab) => {
-//   console.log("[backtround.ts] tab created", tab.id, tab.url);
-//   // graph.addNode(tab.id, tab.url)
-// })
-
-// // When a tab is updated (e.g., navigated)
-// chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-//   if (changeInfo.url) {
-//     console.log("[backtround.ts] tab updated", tab.id, tab.url, changeInfo);
-//     // graph.addNode(tabId, changeInfo.url)
-//     // graph.addEdge(tabId, changeInfo.url) // You can track "from" if you store previous URL
-//   }
-// })
-
-// // When a tab is restored
-// chrome.sessions.onChanged.addListener((session) => {
-//   if (session.tab) {
-//     // graph.addNode(session.tab.id, session.tab.url)
-//   }
-// })
-
-// // When a tab is removed
-// chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-//   console.log("[backtround.ts] tab closed", tabId, removeInfo)
-//   // graph.removeNode(tabId)
-// })
-
-// // When a user switches tabs
-// chrome.tabs.onActivated.addListener((activeInfo) => {
-//   chrome.tabs.get(activeInfo.tabId, (tab) => {
-//     console.log("[backtround.ts] tab switched (within window)", tab.id, tab.url)
-//     // graph.recordActivation(activeInfo.tabId, tab.url)
-//   })
-// })
+const graph = new Graph()
 
 chrome.webNavigation.onCommitted.addListener((details) => {
   const { tabId, url, frameId, transitionType, transitionQualifiers } = details
 
   if (frameId !== 0) {
-    console.error("Non-0 frameId change", frameId)
+    // console.warn("Non-0 frameId change", frameId)
     return
   }
 
@@ -57,7 +20,13 @@ chrome.webNavigation.onCommitted.addListener((details) => {
 
   switch (transitionType) {
     case "link":
-      console.log("User clicked a link")
+      if (!transitionQualifiers.includes("forward_back")) {
+        console.log("User clicked a link")
+        graph.addNode(tabId, url)
+        
+        console.log("ADDED NODE TO GRAPH", graph.getGraph());
+      }
+
       break
     case "typed":
       console.log("User typed a URL")
@@ -89,5 +58,10 @@ chrome.webNavigation.onCommitted.addListener((details) => {
     case "keyword_generated":
       console.log("User used keyword_generated")
       break
+  }
+
+  if (transitionQualifiers.includes("forward_back")) {
+    console.log("User used forward/back");
+    
   }
 })
