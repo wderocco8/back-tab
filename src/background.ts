@@ -23,8 +23,7 @@ chrome.webNavigation.onCommitted.addListener((details) => {
       if (!transitionQualifiers.includes("forward_back")) {
         console.log("User clicked a link")
         graph.addNode(tabId, url)
-        
-        console.log("ADDED NODE TO GRAPH", graph.getGraph());
+        console.log(graph.getActiveNode(tabId), graph.getGraph());
       }
 
       break
@@ -61,7 +60,8 @@ chrome.webNavigation.onCommitted.addListener((details) => {
   }
 
   if (transitionQualifiers.includes("forward_back")) {
-    console.log("User used forward/back");
-    
+    console.log("User used forward/back")
+    graph.goForwardBack(tabId, url)
+    console.log(graph.getActiveNode(tabId), graph.getGraph());
   }
 })
