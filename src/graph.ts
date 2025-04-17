@@ -9,8 +9,21 @@ type GraphNode = {
 }
 
 export class Graph {
-  private activeNodeId: string = null
   private nodes: Map<string, GraphNode> = new Map()
+  private tabToActiveNode: Map<number, string> = new Map() // tabId -> nodeId
+
+  /**
+   *
+   * @returns List of `GraphNode` objects
+   */
+  getGraph(): GraphNode[] {
+    return Array.from(this.nodes.values())
+  }
+
+  getActiveNode(tabId: number): GraphNode | undefined {
+    const nodeId = this.tabToActiveNode.get(tabId)
+    return nodeId ? this.nodes.get(nodeId) : undefined
+  }
 
   /**
    * Adds a node to our url/tab graph.
@@ -21,7 +34,7 @@ export class Graph {
     const timestamp = Date.now()
     const id = uuidv4()
 
-    const parentNodeId = this.activeNodeId
+    const parentNodeId = this.tabToActiveNode.get(tabId) ?? null
     const newNode: GraphNode = {
       id,
       url,
@@ -41,12 +54,12 @@ export class Graph {
     }
 
     // Update active node
-    this.activeNodeId = id
+    this.tabToActiveNode.set(tabId, id)
 
     return newNode
   }
 
-  getGraph(): GraphNode[] {
-    return Array.from(this.nodes.values())
+  goForwardBack() {
+
   }
 }
