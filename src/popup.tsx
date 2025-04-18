@@ -1,38 +1,29 @@
-import { useEffect, useState } from "react"
-
+import "@xyflow/react/dist/style.css"
 import "@/styles/globals.css"
 
-import { Button } from "@/components/ui/button"
-import type { GraphNode } from "@/types/graph"
+import { Background, BackgroundVariant, ReactFlow } from "@xyflow/react"
+import { useEffect } from "react"
+
+const initialNodes = [
+  { id: "1", position: { x: 0, y: 0 }, data: { label: "1" } },
+  { id: "2", position: { x: 0, y: 0 }, data: { label: "2" } }
+]
+const initialEdges = [{ id: "e1-2", source: "1", target: "2" }]
 
 function IndexPopup() {
-  const [graph, setGraph] = useState<GraphNode[]>([])
-
-  // useEffect(() => {
-  //   const listener = (message: any) => {
-  //     if (message?.type === "GRAPH_UPDATED") {
-  //       setGraph(message.graph)
-  //     }
-  //   }
-
-  //   chrome.runtime.onMessage.addListener(listener)
-  //   return () => chrome.runtime.onMessage.removeListener(listener)
-  // }, [])
-
   useEffect(() => {
     chrome.runtime.sendMessage({ type: "GET_GRAPH" }, (response) => {
-
       if (response?.graph) {
-        setGraph(response.graph)
+        // TODO: convert graph to nodes and edges
       }
     })
   }, [])
 
   return (
-    <div className="p-4 text-center">
-      Hello from Tailwind!
-      <Button variant="destructive">Let's go</Button>
-      {graph.toString()}
+    <div className="w-96 h-96">
+      <ReactFlow nodes={initialNodes} edges={initialEdges}>
+        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+      </ReactFlow>
     </div>
   )
 }
