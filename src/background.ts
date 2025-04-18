@@ -1,9 +1,30 @@
-import { Graph } from "./graph"
+import { Graph } from "@/graph"
 
 export {}
 
 const graph = new Graph()
 
+// Handle messaging from background to popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log("[background] receieved message", request);
+  
+  if (request.type === "GET_GRAPH") {
+    sendResponse({
+      graph: graph.getGraph()
+    })
+  }
+
+  // Optional: send active node
+  if (request.type === "GET_ACTIVE_NODE") {
+    sendResponse({
+      activeNode: graph.getActiveNode(request.tabId)
+    })
+  }
+
+  return true // required if you send async responses
+})
+
+// Handle navigation events (build and update the graph)
 chrome.webNavigation.onCommitted.addListener((details) => {
   const { tabId, url, frameId, transitionType, transitionQualifiers } = details
 
