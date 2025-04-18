@@ -1,27 +1,32 @@
 import "@xyflow/react/dist/style.css"
 import "@/styles/globals.css"
 
-import { Background, BackgroundVariant, ReactFlow } from "@xyflow/react"
+import { Background, BackgroundVariant, ReactFlow, useEdgesState, useNodesState, type Edge, type Node } from "@xyflow/react"
 import { useEffect } from "react"
-
-const initialNodes = [
-  { id: "1", position: { x: 0, y: 0 }, data: { label: "1" } },
-  { id: "2", position: { x: 0, y: 0 }, data: { label: "2" } }
-]
-const initialEdges = [{ id: "e1-2", source: "1", target: "2" }]
+import { convertGraphToFlow } from "@/graph/toFlow";
+import type { GraphNode } from "@/types/graph";
 
 function IndexPopup() {
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+
   useEffect(() => {
     chrome.runtime.sendMessage({ type: "GET_GRAPH" }, (response) => {
       if (response?.graph) {
-        // TODO: convert graph to nodes and edges
+        const graph: GraphNode[] = response.graph;
+        const raw = convertGraphToFlow(graph)
+        console.log("[IndexPopup] converted graph", raw);
+        
+        setNodes(raw.nodes)
+        setEdges(raw.edges)
       }
     })
   }, [])
 
   return (
     <div className="w-96 h-96">
-      <ReactFlow nodes={initialNodes} edges={initialEdges}>
+      <ReactFlow nodes={nodes} edges={edges}>
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
       </ReactFlow>
     </div>
