@@ -1,7 +1,9 @@
 import "@xyflow/react/dist/style.css"
 import "@/styles/globals.css"
 
+import CustomNode from "@/components/CustomNode"
 import { convertGraphToFlow } from "@/graph/toFlow"
+import applyDagreLayout from "@/graph/toLayout"
 import type { GraphNode } from "@/types/graph"
 import {
   Background,
@@ -14,7 +16,9 @@ import {
 } from "@xyflow/react"
 import { useEffect } from "react"
 
-import applyDagreLayout from "./graph/toLayout"
+const nodeTypes = {
+  tooltip: CustomNode
+}
 
 function IndexPopup() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
@@ -34,7 +38,7 @@ function IndexPopup() {
 
   return (
     <div className="w-96 h-96">
-      <ReactFlow nodes={nodes} edges={edges} fitView>
+      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView>
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
       </ReactFlow>
     </div>

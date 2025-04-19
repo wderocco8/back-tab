@@ -13,11 +13,12 @@ export function convertGraphToFlow(graph: GraphNode[]): {
     // Handle node
     nodes.push({
       id: node.id,
-      data: { label: "", timestamp: node.timeStamp },
-      position: { x: 0, y: 0 }, // TODO: use layout engine to modify (use Omit to ignore this field)
+      data: { label: "", url: node.url, timestamp: node.timeStamp },
+      position: { x: 0, y: 0 },
       width: DEFAULT_NODE_DIMENSIONS,
       height: DEFAULT_NODE_DIMENSIONS,
       connectable: false,
+      type: "tooltip"
     })
 
     // Handle edge
