@@ -1,3 +1,4 @@
+import { DEFAULT_NODE_DIMENSIONS } from "@/constants"
 import type { GraphNode } from "@/types/graph"
 import type { Edge, Node } from "@xyflow/react"
 
@@ -15,12 +16,16 @@ export function convertGraphToFlow(graph: GraphNode[]): {
     // Handle node
     nodes.push({
       id: node.id,
-      data: { label: node.url, timestamp: node.timeStamp },
-      position: { x: x, y: y } // TODO: use layout engine to modify
+      data: { label: "", timestamp: node.timeStamp },
+      position: { x: x, y: y }, // TODO: use layout engine to modify (use Omit to ignore this field)
+      width: DEFAULT_NODE_DIMENSIONS,
+      height: DEFAULT_NODE_DIMENSIONS,
+
     })
 
-    x += 100
-    y += 100
+    // TODO: remove positions...
+    // x += 100
+    // y += 100
 
     // Handle edge
     for (const childId of node.children) {

@@ -5,6 +5,7 @@ import { Background, BackgroundVariant, ReactFlow, useEdgesState, useNodesState,
 import { useEffect } from "react"
 import { convertGraphToFlow } from "@/graph/toFlow";
 import type { GraphNode } from "@/types/graph";
+import applyDagreLayout from "./graph/toLayout";
 
 function IndexPopup() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -15,11 +16,11 @@ function IndexPopup() {
     chrome.runtime.sendMessage({ type: "GET_GRAPH" }, (response) => {
       if (response?.graph) {
         const graph: GraphNode[] = response.graph;
-        const raw = convertGraphToFlow(graph)
-        console.log("[IndexPopup] converted graph", raw);
-        
-        setNodes(raw.nodes)
-        setEdges(raw.edges)
+        const rawFlow = convertGraphToFlow(graph)
+        console.log("[IndexPopup] converted graph", rawFlow);
+        const layoutFlow = applyDagreLayout(rawFlow.nodes, rawFlow.edges)
+        setNodes(layoutFlow.nodes)
+        setEdges(layoutFlow.edges)
       }
     })
   }, [])

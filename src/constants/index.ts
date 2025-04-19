@@ -1,0 +1,1 @@
+export const DEFAULT_NODE_DIMENSIONS = 25
