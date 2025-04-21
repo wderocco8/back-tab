@@ -20,6 +20,8 @@ const nodeTypes = {
   tooltip: CustomNode
 }
 
+const proOptions = { hideAttribution: true }
+
 function IndexPopup() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
@@ -45,7 +47,15 @@ function IndexPopup() {
 
   return (
     <div className="w-96 h-96">
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        proOptions={proOptions}
+        panOnScroll
+        panOnScrollSpeed={0.8}
+        selectionOnDrag
+        fitView>
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
       </ReactFlow>
     </div>
