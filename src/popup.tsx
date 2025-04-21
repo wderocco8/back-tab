@@ -14,30 +14,41 @@ import {
   type Edge,
   type Node
 } from "@xyflow/react"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
 const nodeTypes = {
   tooltip: CustomNode
 }
 
 function IndexPopup() {
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
   useEffect(() => {
-    chrome.runtime.sendMessage({ type: "GET_GRAPH" }, (response) => {
-      if (response?.graph) {
-        const graph: GraphNode[] = response.graph
-        const rawFlow = convertGraphToFlow(graph)
-        const layoutFlow = applyDagreLayout(rawFlow.nodes, rawFlow.edges)
-        setNodes(layoutFlow.nodes)
-        setEdges(layoutFlow.edges)
-      }
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs[0]
+
+      chrome.runtime.sendMessage(
+        { type: "GET_GRAPH", tabId: tab.id },
+        (response) => {
+          console.log("response", response)
+          if (response?.graph) {
+            const graph: GraphNode[] = response.graph
+            const rawFlow = convertGraphToFlow(graph)
+            const layoutFlow = applyDagreLayout(rawFlow.nodes, rawFlow.edges)
+            setActiveNodeId(response.activeNodeId)
+            setNodes(layoutFlow.nodes)
+            setEdges(layoutFlow.edges)
+          }
+        }
+      )
     })
   }, [])
 
   return (
     <div className="w-96 h-96">
+      activeNode: {activeNodeId}
       <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView>
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
       </ReactFlow>

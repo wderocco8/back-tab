@@ -6,22 +6,16 @@ const graph = new Graph()
 
 // Handle messaging from background to popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("[background] receieved message", request);
-  
+  console.log("[background] receieved message", request)
+
   if (request.type === "GET_GRAPH") {
     sendResponse({
-      graph: graph.getGraph()
+      graph: graph.getGraph(),
+      activeNodeId: graph.getActiveNodeId(request.tabId),
     })
   }
 
-  // Optional: send active node
-  if (request.type === "GET_ACTIVE_NODE") {
-    sendResponse({
-      activeNode: graph.getActiveNode(request.tabId)
-    })
-  }
-
-  return true // required if you send async responses
+  return true
 })
 
 // Handle navigation events (build and update the graph)
@@ -44,7 +38,7 @@ chrome.webNavigation.onCommitted.addListener((details) => {
       if (!transitionQualifiers.includes("forward_back")) {
         console.log("User clicked a link")
         graph.addNode(tabId, url)
-        console.log(graph.getActiveNode(tabId), graph.getGraph());
+        console.log(graph.getActiveNode(tabId), graph.getGraph())
       }
 
       break
@@ -83,6 +77,6 @@ chrome.webNavigation.onCommitted.addListener((details) => {
   if (transitionQualifiers.includes("forward_back")) {
     console.log("User used forward/back")
     graph.goForwardBack(tabId, url)
-    console.log(graph.getActiveNode(tabId), graph.getGraph());
+    console.log(graph.getActiveNode(tabId), graph.getGraph())
   }
 })

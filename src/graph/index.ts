@@ -1,5 +1,5 @@
-import { v4 as uuidv4 } from "uuid"
 import type { GraphNode } from "@/types/graph"
+import { v4 as uuidv4 } from "uuid"
 
 export class Graph {
   private nodes: Map<string, GraphNode> = new Map() // nodeId -> GraphNode
@@ -20,9 +20,13 @@ export class Graph {
     return nodeId ? this.nodes.get(nodeId) : undefined
   }
 
+  getActiveNodeId(tabId?: number | null): string | undefined {
+    if (!tabId) throw new Error("[Graph.getActiveNode] tabId is undefined")
+    return this.tabToActiveNode.get(tabId)
+  }
+
   getActiveNode(tabId?: number | null): GraphNode | undefined {
-    if (!tabId) return undefined
-    const nodeId = this.tabToActiveNode.get(tabId)
+    const nodeId = this.getActiveNodeId(tabId)
     return nodeId ? this.nodes.get(nodeId) : undefined
   }
 
