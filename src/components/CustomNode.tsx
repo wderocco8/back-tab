@@ -8,7 +8,7 @@ import React, { memo } from "react"
 
 const CustomNode = memo(({ data, selected }: NodeProps) => {  
   return (
-    <TooltipNode selected={selected}>
+    <TooltipNode data={data} selected={selected}>
       {/* TODO: fix data?.url type errors */}
       <TooltipContent position={Position.Top}>{String(data?.url)}</TooltipContent>
       <TooltipTrigger>

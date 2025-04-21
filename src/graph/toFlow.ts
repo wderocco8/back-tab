@@ -2,7 +2,10 @@ import { DEFAULT_NODE_DIMENSIONS } from "@/constants"
 import type { GraphNode } from "@/types/graph"
 import type { Edge, Node } from "@xyflow/react"
 
-export function convertGraphToFlow(graph: GraphNode[]): {
+export function convertGraphToFlow(
+  graph: GraphNode[],
+  activeNodeId: string
+): {
   nodes: Node[]
   edges: Edge[]
 } {
@@ -13,7 +16,12 @@ export function convertGraphToFlow(graph: GraphNode[]): {
     // Handle node
     nodes.push({
       id: node.id,
-      data: { label: "", url: node.url, timestamp: node.timeStamp },
+      data: {
+        label: "",
+        url: node.url,
+        timestamp: node.timeStamp,
+        isActive: node.id === activeNodeId
+      },
       position: { x: 0, y: 0 },
       width: DEFAULT_NODE_DIMENSIONS,
       height: DEFAULT_NODE_DIMENSIONS,

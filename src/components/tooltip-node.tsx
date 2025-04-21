@@ -28,7 +28,7 @@ export type TooltipNodeProps = Partial<NodeProps> & {
  * A component that wraps a node and provides tooltip visibility context.
  */
 export const TooltipNode = forwardRef<HTMLDivElement, TooltipNodeProps>(
-  ({ selected, children }, ref) => {
+  ({ selected, data, children }, ref) => {
     const [isTooltipVisible, setTooltipVisible] = useState(false)
 
     const showTooltip = useCallback(() => setTooltipVisible(true), [])
@@ -43,7 +43,9 @@ export const TooltipNode = forwardRef<HTMLDivElement, TooltipNodeProps>(
           onFocus={showTooltip}
           onBlur={hideTooltip}
           tabIndex={0}
-          selected={selected}>
+          selected={selected}
+          isActive={data?.isActive as boolean}>
+          {/*  TODO: is there a way to avoid type-casting here (... as Boolean) */}
           {children}
         </BaseNode>
       </TooltipContext.Provider>
