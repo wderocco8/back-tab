@@ -4,60 +4,55 @@ import React, { createContext, useContext, useEffect, useState } from "react"
 
 type ThemeContextType = {
   colorMode: ColorMode
-  setColorMode: (theme: ColorMode) => void
+  updateColorMode: (colorMode: ColorMode) => void
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   colorMode: "system",
-  setColorMode: () => {}
+  updateColorMode: () => {
+    console.warn(
+      "[ThemeContext] updateColorMode was called, but no ThemeProvider is wrapping your component. Make sure to wrap your app with <ThemeProvider>."
+    )
+  }
 })
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // const [theme, setTheme] = useState<string>("system")
   const [colorMode, setColorMode] = useState<ColorMode>("system")
 
-  const updateTheme = (newColorMode: ColorMode) => {
+  const updateColorMode = (newColorMode: ColorMode) => {
+    console.log("updating theme: ", newColorMode)
+
     setColorMode(newColorMode)
 
     // Convert theme to ColorMode for ReactFlow
     if (newColorMode === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light"
-      setColorMode(systemTheme as ColorMode)
+      const isDarkMode = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches
+      document.documentElement.classList.toggle("dark", isDarkMode)
     } else {
-      setColorMode(newColorMode as ColorMode)
+      document.documentElement.classList.toggle("dark", newColorMode === "dark")
     }
-
-    // Apply theme to document for portal inheritance
-    document.documentElement.classList.toggle(
-      "dark",
-      newColorMode === "dark" ||
-        (newColorMode === "system" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-    )
   }
 
   useEffect(() => {
     // Initialize theme
-    updateTheme(colorMode)
+    updateColorMode(colorMode)
 
-    // Optional: Listen for system theme changes
-    if (colorMode === "system") {
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-      const handleChange = () => {
+    // Set up system theme change listener
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    const handleChange = () => {
+      if (colorMode === "system") {
         document.documentElement.classList.toggle("dark", mediaQuery.matches)
-        setColorMode(mediaQuery.matches ? "dark" : "light")
       }
-
-      mediaQuery.addEventListener("change", handleChange)
-      return () => mediaQuery.removeEventListener("change", handleChange)
     }
-  }, [colorMode])
+
+    mediaQuery.addEventListener("change", handleChange)
+    return () => mediaQuery.removeEventListener("change", handleChange)
+  }, [])
 
   return (
-    <ThemeContext.Provider value={{ colorMode, setColorMode: updateTheme }}>
+    <ThemeContext.Provider value={{ colorMode, updateColorMode }}>
       {children}
     </ThemeContext.Provider>
   )

@@ -12,13 +12,11 @@ import {
 } from "@/components/ui/select"
 import { convertGraphToFlow } from "@/graph/toFlow"
 import applyDagreLayout from "@/graph/toLayout"
-import { cn } from "@/lib/utils"
 import type { GraphNode } from "@/types/graph"
 import {
   Background,
   BackgroundVariant,
   Controls,
-  MiniMap,
   Panel,
   ReactFlow,
   useEdgesState,
@@ -27,7 +25,7 @@ import {
   type Edge,
   type Node
 } from "@xyflow/react"
-import { useEffect, useState, type ChangeEventHandler } from "react"
+import { useEffect } from "react"
 
 const nodeTypes = {
   tooltip: CustomNode
@@ -35,8 +33,8 @@ const nodeTypes = {
 
 const proOptions = { hideAttribution: true }
 
-function IndexPopup() {
-  const { colorMode, setColorMode } = useTheme()
+function InnerPopup() {
+  const { colorMode, updateColorMode } = useTheme()
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
@@ -66,38 +64,42 @@ function IndexPopup() {
   }, [])
 
   return (
-    <ThemeProvider>
-      <div className={cn("w-96 h-96")}>
-        <div className="bg-red-500 dark:bg-blue-600">hello world</div>
-        <ReactFlow
-          className="floating-edges"
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          proOptions={proOptions}
-          colorMode={colorMode}
-          panOnScroll
-          panOnScrollSpeed={0.8}
-          selectionOnDrag
-          fitView>
-          {/* <MiniMap /> */}
-          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-          <Controls />
+    <div className="w-96 h-96">
+      <ReactFlow
+        className="floating-edges"
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        proOptions={proOptions}
+        colorMode={colorMode}
+        panOnScroll
+        panOnScrollSpeed={0.8}
+        selectionOnDrag
+        fitView>
+        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+        <Controls />
 
-          <Panel position="top-right">
-            <Select onValueChange={setColorMode} defaultValue={colorMode}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Theme" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="light">Light</SelectItem>
-                <SelectItem value="dark">Dark</SelectItem>
-                <SelectItem value="system">System</SelectItem>
-              </SelectContent>
-            </Select>
-          </Panel>
-        </ReactFlow>
-      </div>
+        <Panel position="top-right">
+          <Select onValueChange={updateColorMode} defaultValue={colorMode}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Theme" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="light">Light</SelectItem>
+              <SelectItem value="dark">Dark</SelectItem>
+              <SelectItem value="system">System</SelectItem>
+            </SelectContent>
+          </Select>
+        </Panel>
+      </ReactFlow>
+    </div>
+  )
+}
+
+function IndexPopup() {
+  return (
+    <ThemeProvider>
+      <InnerPopup />
     </ThemeProvider>
   )
 }
