@@ -18,7 +18,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true
 })
 
-// Handle navigation events (build and update the graph)
+// Handle navigation events (contruct the graph)
 chrome.webNavigation.onCommitted.addListener((details) => {
   const { tabId, url, frameId, transitionType, transitionQualifiers } = details
 
@@ -38,12 +38,14 @@ chrome.webNavigation.onCommitted.addListener((details) => {
       if (!transitionQualifiers.includes("forward_back")) {
         console.log("User clicked a link")
         graph.addNode(tabId, url)
-        console.log(graph.getActiveNode(tabId), graph.getGraph())
+        // console.log(graph.getActiveNode(tabId), graph.getGraph())
       }
 
       break
     case "typed":
       console.log("User typed a URL")
+      // const prevTabId
+      graph.addNode(tabId, url)
       break
     case "auto_bookmark":
       console.log("User used a bookmark")
@@ -77,6 +79,6 @@ chrome.webNavigation.onCommitted.addListener((details) => {
   if (transitionQualifiers.includes("forward_back")) {
     console.log("User used forward/back")
     graph.goForwardBack(tabId, url)
-    console.log(graph.getActiveNode(tabId), graph.getGraph())
+    // console.log(graph.getActiveNode(tabId), graph.getGraph())
   }
 })
