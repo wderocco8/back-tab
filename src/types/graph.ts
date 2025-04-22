@@ -1,6 +1,9 @@
 export type GraphNode = {
-  /** Unique identifier for the node */
+  /** ID for the node */
   id: string
+
+  /** ID of the tab containing this node */
+  tabId: number
 
   /** URL the node represents */
   url: string
@@ -16,6 +19,4 @@ export type GraphNode = {
 
   /** ID of the last node navigated to from this one using "forward" */
   lastForward: string | null
-
-  // TODO: maybe include tabId
 }

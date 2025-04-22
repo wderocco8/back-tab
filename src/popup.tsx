@@ -29,13 +29,19 @@ function IndexPopup() {
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs[0]
+      const tabId = tab.id
+      if (!tabId) throw new Error("[popup.tsx] useEffect tabId not defined")
 
       chrome.runtime.sendMessage(
-        { type: "GET_GRAPH", tabId: tab.id },
+        { type: "GET_GRAPH", tabId: tabId },
         (response) => {
           if (response?.graph && response?.activeNodeId) {
             const graph: GraphNode[] = response.graph
-            const rawFlow = convertGraphToFlow(graph, response.activeNodeId)
+            const rawFlow = convertGraphToFlow(
+              graph,
+              response.activeNodeId,
+              tabId
+            )
             const layoutFlow = applyDagreLayout(rawFlow.nodes, rawFlow.edges)
             setNodes(layoutFlow.nodes)
             setEdges(layoutFlow.edges)
@@ -48,6 +54,7 @@ function IndexPopup() {
   return (
     <div className="w-96 h-96">
       <ReactFlow
+        className="floating-edges"
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}

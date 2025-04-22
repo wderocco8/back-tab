@@ -4,7 +4,8 @@ import type { Edge, Node } from "@xyflow/react"
 
 export function convertGraphToFlow(
   graph: GraphNode[],
-  activeNodeId: string
+  activeNodeId: string,
+  tabId: number
 ): {
   nodes: Node[]
   edges: Edge[]
@@ -23,10 +24,11 @@ export function convertGraphToFlow(
         isActive: node.id === activeNodeId
       },
       position: { x: 0, y: 0 },
+      type: "tooltip",
       width: DEFAULT_NODE_DIMENSIONS,
       height: DEFAULT_NODE_DIMENSIONS,
       connectable: false,
-      type: "tooltip"
+      hidden: node.tabId === tabId ? false : true
     })
 
     // Handle edge

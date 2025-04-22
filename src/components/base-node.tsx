@@ -8,7 +8,7 @@ export const BaseNode = forwardRef<
   <div
     ref={ref}
     className={cn(
-      "relative rounded-md border bg-card p-5 text-card-foreground",
+      "relative rounded-full border bg-card p-5 text-card-foreground",
       className,
       selected ? "border-muted-foreground shadow-lg" : "",
       isActive ? "border-red-500 ring-2 ring-red-300" : "",

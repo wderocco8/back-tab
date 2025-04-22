@@ -42,6 +42,7 @@ export class Graph {
     const parentNodeId = this.tabToActiveNode.get(tabId) ?? null
     const newNode: GraphNode = {
       id,
+      tabId: tabId,
       url,
       timeStamp: timestamp,
       children: [],
