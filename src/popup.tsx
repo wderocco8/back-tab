@@ -3,13 +3,6 @@ import "@/styles/globals.css"
 
 import CustomNode from "@/components/CustomNode"
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select"
 import { convertGraphToFlow } from "@/graph/toFlow"
 import applyDagreLayout from "@/graph/toLayout"
 import type { GraphNode } from "@/types/graph"
@@ -17,11 +10,9 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  Panel,
   ReactFlow,
   useEdgesState,
   useNodesState,
-  type ColorMode,
   type Edge,
   type Node
 } from "@xyflow/react"
@@ -34,7 +25,7 @@ const nodeTypes = {
 const proOptions = { hideAttribution: true }
 
 function InnerPopup() {
-  const { colorMode, updateColorMode } = useTheme()
+  const { colorMode } = useTheme()
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
@@ -78,19 +69,6 @@ function InnerPopup() {
         fitView>
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         <Controls />
-
-        <Panel position="top-right">
-          <Select onValueChange={updateColorMode} defaultValue={colorMode}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Theme" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="light">Light</SelectItem>
-              <SelectItem value="dark">Dark</SelectItem>
-              <SelectItem value="system">System</SelectItem>
-            </SelectContent>
-          </Select>
-        </Panel>
       </ReactFlow>
     </div>
   )
