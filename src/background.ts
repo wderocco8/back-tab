@@ -37,8 +37,8 @@ chrome.webNavigation.onCommitted.addListener((details) => {
     case "link":
       if (!transitionQualifiers.includes("forward_back")) {
         console.log("User clicked a link")
+        // TODO: handle edge case (user navigates to same url repeatedly (don't expand graph...))
         graph.addNode(tabId, url)
-        // console.log(graph.getActiveNode(tabId), graph.getGraph())
       }
 
       break

@@ -5,12 +5,6 @@ export class Graph {
   private nodes: Map<string, GraphNode> = new Map() // nodeId -> GraphNode
   private tabToActiveNode: Map<number, string> = new Map() // tabId -> nodeId
 
-  // maybe...
-  toString() {
-    return Array.from(this.nodes.values()).toString()
-  }
-
-  // TODO: probably better to return a map instead
   getGraph(): GraphNode[] {
     return Array.from(this.nodes.values())
   }
@@ -30,10 +24,14 @@ export class Graph {
     return nodeId ? this.nodes.get(nodeId) : undefined
   }
 
+  setActiveNode(tabId: number, nodeId: string): void {
+    this.tabToActiveNode.set(tabId, nodeId)
+  }
+
   /**
    * Adds a node to our url/tab graph.
-   * @param tabId
-   * @param url
+   * @param tabId ID of tab associated with node
+   * @param url URL asscoaited with this node
    */
   addNode(tabId: number, url: string): GraphNode {
     const timestamp = Date.now()

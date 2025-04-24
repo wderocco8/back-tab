@@ -14,7 +14,9 @@ import {
   useEdgesState,
   useNodesState,
   type Edge,
-  type Node
+  type Node,
+  type NodeMouseHandler,
+  type ReactFlowProps
 } from "@xyflow/react"
 import { useEffect } from "react"
 
@@ -26,8 +28,8 @@ const proOptions = { hideAttribution: true }
 
 function InnerPopup() {
   const { colorMode } = useTheme()
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+  const [nodes, setNodes] = useNodesState<Node>([])
+  const [edges, setEdges] = useEdgesState<Edge>([])
 
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -54,8 +56,12 @@ function InnerPopup() {
     })
   }, [])
 
+  const handleNodeClick: NodeMouseHandler<Node> = (event, node) => {
+    console.log("node clickde", event, node)
+  }
+
   return (
-    <div className="w-96 h-96" >
+    <div className="w-96 h-96">
       <ReactFlow
         className="floating-edges"
         nodes={nodes}
@@ -63,6 +69,7 @@ function InnerPopup() {
         nodeTypes={nodeTypes}
         proOptions={proOptions}
         colorMode={colorMode}
+        // onNodeClick={handleNodeClick}
         panOnScroll
         panOnScrollSpeed={0.8}
         selectionOnDrag
