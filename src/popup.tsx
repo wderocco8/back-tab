@@ -55,7 +55,7 @@ function InnerPopup() {
   }, [])
 
   return (
-    <div className="w-96 h-96">
+    <div className="w-96 h-96" >
       <ReactFlow
         className="floating-edges"
         nodes={nodes}
@@ -68,7 +68,7 @@ function InnerPopup() {
         selectionOnDrag
         fitView>
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-        <Controls />
+        <Controls showInteractive={false} />
       </ReactFlow>
     </div>
   )
