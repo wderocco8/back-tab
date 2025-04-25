@@ -24,8 +24,9 @@ export class Graph {
     return nodeId ? this.nodes.get(nodeId) : undefined
   }
 
-  setActiveNode(tabId: number, nodeId: string): void {
+  setActiveNode(tabId: number, nodeId: string): GraphNode | undefined {
     this.tabToActiveNode.set(tabId, nodeId)
+    return this.getNode(nodeId)
   }
 
   /**

@@ -1,17 +1,33 @@
+import { MESSAGE_LISTENERS } from "@/constants"
 import { Graph } from "@/graph"
 
 export {}
 
 const graph = new Graph()
 
+// Use to determine if naviagation is caused by extension or by the browser
+const extensionInitiatedNavigations = new Set<string>() // key: `${tabId}|${url}`
+
 // Handle messaging from background to popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, _ , sendResponse) => {
   console.log("[background] receieved message", request)
 
-  if (request.type === "GET_GRAPH") {
+  if (request.type === MESSAGE_LISTENERS.GET_GRAPH) {
     sendResponse({
       graph: graph.getGraph(),
-      activeNodeId: graph.getActiveNodeId(request.tabId),
+      activeNodeId: graph.getActiveNodeId(request.tabId)
+    })
+  }
+
+  if (request.type === MESSAGE_LISTENERS.SET_ACTIVE_NODE) {
+    const [tabId, nodeId] = [request.tabId, request.nodeId]
+    const activeNode = graph.setActiveNode(tabId, nodeId)
+    const key = `${tabId}|${activeNode?.url}`
+    extensionInitiatedNavigations.add(key)
+    chrome.tabs.update({ url: activeNode?.url })
+    chrome.runtime.sendMessage({
+      type: "GRAPH_UPDATED",
+      tabId: tabId
     })
   }
 
@@ -32,6 +48,15 @@ chrome.webNavigation.onCommitted.addListener((details) => {
     transitionType,
     transitionQualifiers
   })
+
+  const key = `${details.tabId}|${details.url}`
+  const isExtensionNav = extensionInitiatedNavigations.has(key)
+
+  if (isExtensionNav) {
+    console.log("[webNavigation] Detected extension-initiated nav")
+    extensionInitiatedNavigations.delete(key) // clean up
+    return
+  }
 
   switch (transitionType) {
     case "link":

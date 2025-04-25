@@ -20,7 +20,8 @@ export function convertGraphToFlow(
       data: {
         label: "",
         url: node.url,
-        timestamp: node.timeStamp,
+        tabId: node.tabId,
+        timeStamp: node.timeStamp,
         isActive: node.id === activeNodeId
       },
       position: { x: 0, y: 0 },
