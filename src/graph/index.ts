@@ -9,22 +9,33 @@ export class Graph {
     return Array.from(this.nodes.values())
   }
 
-  getNode(nodeId?: string | null): GraphNode | undefined {
-    if (!nodeId) return undefined
-    return nodeId ? this.nodes.get(nodeId) : undefined
+  getNode(nodeId: string): GraphNode {
+    const node = this.nodes.get(nodeId)
+    if (!node)
+      throw new Error(`[Graph.getNode] node with nodeId (${nodeId}) not found`)
+    return node
   }
 
-  getActiveNodeId(tabId?: number | null): string | undefined {
-    if (!tabId) throw new Error("[Graph.getActiveNode] tabId is undefined")
-    return this.tabToActiveNode.get(tabId)
+  getActiveNodeId(tabId: number): string {
+    const activeNodeId = this.tabToActiveNode.get(tabId)
+    if (!activeNodeId)
+      throw new Error(
+        `[Graph.getActiveNodeId] activeNodeId for tabId (${tabId}) not found`
+      )
+    return activeNodeId
   }
 
-  getActiveNode(tabId?: number | null): GraphNode | undefined {
+  getActiveNode(tabId: number): GraphNode {
     const nodeId = this.getActiveNodeId(tabId)
-    return nodeId ? this.nodes.get(nodeId) : undefined
+    const node = this.nodes.get(nodeId)
+    if (!node)
+      throw new Error(
+        `[Graph.getActiveNode] node with nodeId (${nodeId}) not found`
+      )
+    return node
   }
 
-  setActiveNode(tabId: number, nodeId: string): GraphNode | undefined {
+  setActiveNode(tabId: number, nodeId: string): GraphNode {
     this.tabToActiveNode.set(tabId, nodeId)
     return this.getNode(nodeId)
   }
@@ -70,8 +81,10 @@ export class Graph {
     const activeNode = this.getActiveNode(tabId)
     if (!activeNode) throw new Error("[Graph.goForwardBack] No active node set")
 
-    const backNode = this.getNode(activeNode?.parent)
-    const forwardNode = this.getNode(activeNode?.lastForward)
+    const backNode = activeNode.parent ? this.getNode(activeNode.parent) : null
+    const forwardNode = activeNode.lastForward
+      ? this.getNode(activeNode.lastForward)
+      : null
 
     // TODO: fix edge case where back and forward share the same URL
     // (it will choose back regardless currently)
