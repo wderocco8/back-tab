@@ -69,15 +69,20 @@ function InnerPopup() {
       message: any,
       sender: chrome.runtime.MessageSender
     ) => {
-      console.log("updating graph????");
-      
+      console.log("A) handling graph update")
+
       if (message.type === MESSAGE_LISTENERS.GRAPH_UPDATED) {
+        console.log("B) updating graph")
         updateGraph(message.tabId)
       }
     }
 
     chrome.runtime.onMessage.addListener(handleGraphUpdate)
-  })
+
+    return () => {
+      chrome.runtime.onMessage.removeListener(handleGraphUpdate)
+    }
+  }, [])
 
   const handleNodeClick: NodeMouseHandler<Node> = (_, node) => {
     chrome.runtime.sendMessage({
