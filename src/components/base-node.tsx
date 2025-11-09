@@ -3,7 +3,7 @@ import { forwardRef, type HTMLAttributes } from "react"
 
 export const BaseNode = forwardRef<
   HTMLDivElement,
-  HTMLAttributes<HTMLDivElement> & { selected?: boolean, isActive?: boolean }
+  HTMLAttributes<HTMLDivElement> & { selected?: boolean; isActive?: boolean }
 >(({ className, selected, isActive, ...props }, ref) => (
   <div
     ref={ref}

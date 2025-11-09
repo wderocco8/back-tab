@@ -6,11 +6,13 @@ import {
 import { Handle, Position, type NodeProps } from "@xyflow/react"
 import React, { memo } from "react"
 
-const CustomNode = memo(({ data, selected }: NodeProps) => {  
+const CustomNode = memo(({ data, selected }: NodeProps) => {
   return (
     <TooltipNode data={data} selected={selected}>
       {/* TODO: fix data?.url type errors */}
-      <TooltipContent position={Position.Top}>{String(data?.url)}</TooltipContent>
+      <TooltipContent position={Position.Top}>
+        {String(data?.url)}
+      </TooltipContent>
       <TooltipTrigger>
         <Handle type="target" position={Position.Top} />
         <Handle type="source" position={Position.Bottom} />

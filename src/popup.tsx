@@ -55,6 +55,7 @@ function InnerPopup() {
       }
     )
 
+  // 1) Initial graph load
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs[0]
@@ -64,6 +65,7 @@ function InnerPopup() {
     })
   }, [])
 
+  // 2) Listen for graph updates
   useEffect(() => {
     const handleGraphUpdate = (
       message: any,
