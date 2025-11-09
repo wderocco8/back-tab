@@ -5,11 +5,21 @@ export {}
 
 const graph = new Graph()
 
+// const lastUrls = new Map<number, string>() // tabId → last URL
+
+// // TODO: maybe implement de-duplication
+// function handleNav(tabId: number, url: string, source: string) {
+//   if (lastUrls.get(tabId) === url) return // prevent duplicates
+//   lastUrls.set(tabId, url)
+//   console.log(`[${source}] Navigation detected:`, url)
+//   graph.addNode(tabId, url)
+// }
+
 // Use to determine if naviagation is caused by extension or by the browser
 const extensionInitiatedNavigations = new Set<string>() // key: `${tabId}|${url}`
 
 // Handle messaging from background to popup
-chrome.runtime.onMessage.addListener((request, _ , sendResponse) => {
+chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
   console.log("[background] receieved message", request)
 
   if (request.type === MESSAGE_LISTENERS.GET_GRAPH) {
@@ -107,3 +117,13 @@ chrome.webNavigation.onCommitted.addListener((details) => {
     // console.log(graph.getActiveNode(tabId), graph.getGraph())
   }
 })
+
+// chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
+//   if (details.frameId === 0) {
+//     console.log("[webNavigation] SPA route change detected", {
+//       url: details.url,
+//       transitionType: details.transitionType
+//     })
+//     graph.addNode(details.tabId, details.url)
+//   }
+// })

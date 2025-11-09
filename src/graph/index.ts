@@ -60,6 +60,7 @@ export class Graph {
       lastForward: null
     }
 
+    // Add node to graph
     this.nodes.set(id, newNode)
 
     // Add node to parent's children (if possible)

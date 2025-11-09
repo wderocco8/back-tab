@@ -12,13 +12,15 @@ import {
   BackgroundVariant,
   Controls,
   ReactFlow,
+  ReactFlowProvider,
   useEdgesState,
   useNodesState,
+  useReactFlow,
   type Edge,
   type Node,
   type NodeMouseHandler
 } from "@xyflow/react"
-import { useEffect } from "react"
+import { useCallback, useEffect } from "react"
 
 const nodeTypes = {
   tooltip: CustomNode
@@ -30,13 +32,15 @@ function InnerPopup() {
   const { colorMode } = useTheme()
   const [nodes, setNodes] = useNodesState<Node>([])
   const [edges, setEdges] = useEdgesState<Edge>([])
+  const { setViewport, fitView, zoomIn, zoomOut, getNode } = useReactFlow()
 
   const updateGraph = (tabId: number) =>
     chrome.runtime.sendMessage(
       { type: MESSAGE_LISTENERS.GET_GRAPH, tabId: tabId },
       (response) => {
-        if (response?.graph && response?.activeNodeId) {
-          const graph: GraphNode[] = response.graph
+        const graph: GraphNode[] | undefined = response?.graph
+        const activeNodeId: string | undefined = response?.graph
+        if (graph && activeNodeId) {
           const rawFlow = convertGraphToFlow(
             graph,
             response.activeNodeId,
@@ -45,6 +49,8 @@ function InnerPopup() {
           const layoutFlow = applyDagreLayout(rawFlow.nodes, rawFlow.edges)
           setNodes(layoutFlow.nodes)
           setEdges(layoutFlow.edges)
+          // TODO: why is it not fitting by default
+          handleTransform(activeNodeId)
         }
       }
     )
@@ -63,6 +69,8 @@ function InnerPopup() {
       message: any,
       sender: chrome.runtime.MessageSender
     ) => {
+      console.log("updating graph????");
+      
       if (message.type === MESSAGE_LISTENERS.GRAPH_UPDATED) {
         updateGraph(message.tabId)
       }
@@ -77,7 +85,21 @@ function InnerPopup() {
       nodeId: node.id,
       tabId: node.data.tabId
     })
+
+    handleTransform(node.id)
   }
+
+  const handleTransform = useCallback(
+    (nodeId: string) => {
+      const n = getNode(nodeId)
+      if (!n)
+        throw new Error(
+          `[popup.tsx] getNode could not find node with nodeId ${nodeId}`
+        )
+      fitView({ nodes: [n], duration: 300 })
+    },
+    [setViewport, getNode]
+  )
 
   return (
     <div className="w-96 h-96">
@@ -103,7 +125,9 @@ function InnerPopup() {
 function IndexPopup() {
   return (
     <ThemeProvider>
-      <InnerPopup />
+      <ReactFlowProvider>
+        <InnerPopup />
+      </ReactFlowProvider>
     </ThemeProvider>
   )
 }
