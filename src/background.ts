@@ -46,7 +46,7 @@ chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
 
 // Handle navigation events (contruct the graph)
 chrome.webNavigation.onCommitted.addListener((details) => {
-  const { tabId, url, frameId, transitionType, transitionQualifiers } = details
+  const { tabId, url, frameId, transitionType, transitionQualifiers, documentId } = details
 
   if (frameId !== 0) {
     // console.warn("Non-0 frameId change", frameId)

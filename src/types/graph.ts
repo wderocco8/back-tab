@@ -20,3 +20,11 @@ export type GraphNode = {
   /** ID of the last node navigated to from this one using "forward" */
   lastForward: string | null
 }
+
+export type NavigationSession = {
+  /** List of node IDs in visited order */
+  stack: string[]
+
+  /** Current position in stack */
+  index: number
+}

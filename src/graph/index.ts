@@ -1,9 +1,10 @@
-import type { GraphNode } from "@/types/graph"
+import type { GraphNode, NavigationSession } from "@/types/graph"
 import { v4 as uuidv4 } from "uuid"
 
 export class Graph {
   private nodes: Map<string, GraphNode> = new Map() // nodeId -> GraphNode
   private tabToActiveNode: Map<number, string> = new Map() // tabId -> nodeId
+  private tabToNavigationSession: Map<number, NavigationSession> = new Map() // tabId -> NavigationSession
 
   getGraph(): GraphNode[] {
     return Array.from(this.nodes.values())
