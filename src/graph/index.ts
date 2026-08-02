@@ -1,3 +1,4 @@
+import type { TraverseDirection } from "@/contents/navigation-tracker"
 import type { GraphNode, NavigationSession } from "@/types/graph"
 import { v4 as uuidv4 } from "uuid"
 
@@ -79,6 +80,9 @@ export class Graph {
     return newNode
   }
 
+  /**
+   * @deprecated
+   */
   goForwardBack(tabId: number, url: string) {
     const activeNode = this.getActiveNode(tabId)
     if (!activeNode) throw new Error("[Graph.goForwardBack] No active node set")
@@ -104,5 +108,47 @@ export class Graph {
     }
 
     this.tabToActiveNode.set(tabId, newActiveNode)
+  }
+
+  traverse(
+    tabId: number | undefined,
+    url: string,
+    direction: TraverseDirection
+  ) {
+    if (!tabId) {
+      console.error("[Graph.traverse] tabId is undefined?")
+      return
+    }
+    const activeNode = this.getActiveNode(tabId)
+    if (!activeNode) throw new Error("[Graph.traverse] No active node set")
+
+    const backNode = activeNode.parent ? this.getNode(activeNode.parent) : null
+    const forwardNode = activeNode.lastForward
+      ? this.getNode(activeNode.lastForward)
+      : null
+
+    let newActiveNode: string | null = null
+    switch (direction) {
+      case "back":
+        if (backNode) {
+          newActiveNode = backNode.id
+          backNode.lastForward = activeNode?.id
+        } else {
+          console.error("[Graph.traverse] back-node does not exist?")
+        }
+        break
+
+      case "forward":
+        if (forwardNode) {
+          newActiveNode = forwardNode.id
+        } else {
+          console.error("[Graph.traverse] forward-node does not exist?")
+        }
+        break
+    }
+
+    if (newActiveNode) {
+      this.tabToActiveNode.set(tabId, newActiveNode)
+    }
   }
 }

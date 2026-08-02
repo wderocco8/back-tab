@@ -1,8 +1,6 @@
 import { MESSAGE_LISTENERS } from "@/constants"
 import { Graph } from "@/graph"
 
-export {}
-
 const graph = new Graph()
 
 // const lastUrls = new Map<number, string>() // tabId → last URL
@@ -19,7 +17,7 @@ const graph = new Graph()
 const extensionInitiatedNavigations = new Set<string>() // key: `${tabId}|${url}`
 
 // Handle messaging from background to popup
-chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("[background] receieved message", request)
 
   if (request.type === MESSAGE_LISTENERS.GET_GRAPH) {
@@ -27,6 +25,25 @@ chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
       graph: graph.getGraph(),
       activeNodeId: graph.getActiveNodeId(request.tabId)
     })
+  }
+
+  if (request.type === MESSAGE_LISTENERS.NAVIGATION_TRAVERSE) {
+    // sender.tab is only present when the message comes from a content
+    // script (as opposed to the popup/newtab/options pages).
+    const [tabId, url, direction] = [
+      sender.tab?.id,
+      request.url,
+      request.direction
+    ]
+    console.log("[background] traverse detected", {
+      tabId,
+      url,
+      direction
+    })
+    // TODO: decide how this reconciles with the transitionQualifiers
+    // "forward_back" check below and graph.goForwardBack's URL matching.
+    graph.traverse(tabId, url, direction)
+    //   // console.log(graph.getActiveNode(tabId), graph.getGraph())
   }
 
   if (request.type === MESSAGE_LISTENERS.SET_ACTIVE_NODE) {
@@ -46,7 +63,14 @@ chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
 
 // Handle navigation events (contruct the graph)
 chrome.webNavigation.onCommitted.addListener((details) => {
-  const { tabId, url, frameId, transitionType, transitionQualifiers, documentId } = details
+  const {
+    tabId,
+    url,
+    frameId,
+    transitionType,
+    transitionQualifiers,
+    documentId
+  } = details
 
   if (frameId !== 0) {
     // console.warn("Non-0 frameId change", frameId)
@@ -68,14 +92,18 @@ chrome.webNavigation.onCommitted.addListener((details) => {
     return
   }
 
+  if (transitionQualifiers.includes("forward_back")) {
+    console.log(
+      "[webNavigation] forward/back navigation — handled by navigation-tracker, skipping addNode"
+    )
+    return
+  }
+
   switch (transitionType) {
     case "link":
-      if (!transitionQualifiers.includes("forward_back")) {
-        console.log("User clicked a link")
-        // TODO: handle edge case (user navigates to same url repeatedly (don't expand graph...))
-        graph.addNode(tabId, url)
-      }
-
+      console.log("User clicked a link")
+      // TODO: handle edge case (user navigates to same url repeatedly (don't expand graph...))
+      graph.addNode(tabId, url)
       break
     case "typed":
       console.log("User typed a URL")
@@ -111,11 +139,12 @@ chrome.webNavigation.onCommitted.addListener((details) => {
       break
   }
 
-  if (transitionQualifiers.includes("forward_back")) {
-    console.log("User used forward/back")
-    graph.goForwardBack(tabId, url)
-    // console.log(graph.getActiveNode(tabId), graph.getGraph())
-  }
+  // TODO: this is deprecated temporarily -> ideally navigation-tracker should handle it instead...
+  // if (transitionQualifiers.includes("forward_back")) {
+  //   console.log("User used forward/back")
+  //   graph.goForwardBack(tabId, url)
+  //   // console.log(graph.getActiveNode(tabId), graph.getGraph())
+  // }
 })
 
 // chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
