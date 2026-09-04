@@ -39,13 +39,9 @@ function InnerPopup() {
       { type: MESSAGE_LISTENERS.GET_GRAPH, tabId: tabId },
       (response) => {
         const graph: GraphNode[] | undefined = response?.graph
-        const activeNodeId: string | undefined = response?.graph
+        const activeNodeId: string | undefined = response?.activeNodeId
         if (graph && activeNodeId) {
-          const rawFlow = convertGraphToFlow(
-            graph,
-            response.activeNodeId,
-            tabId
-          )
+          const rawFlow = convertGraphToFlow(graph, activeNodeId, tabId)
           const layoutFlow = applyDagreLayout(rawFlow.nodes, rawFlow.edges)
           setNodes(layoutFlow.nodes)
           setEdges(layoutFlow.edges)

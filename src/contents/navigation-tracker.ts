@@ -12,15 +12,21 @@ export type TraverseDirection = "forward" | "back"
 // window.navigation) but not the page's own JS globals or chrome.tabs /
 // chrome.webNavigation / chrome.history (those are background-only).
 window.navigation.addEventListener("navigate", (event) => {
-  console.log("[navigation-tracker] traverse event", event.navigationType)
+  console.log("[navigation-tracker] navigate event", event.navigationType)
 
-  if (event.navigationType !== "traverse") {
+  if (
+    event.navigationType === "push" &&
+    // event.userInitiated &&
+    event.destination.sameDocument
+  ) {
     chrome.runtime.sendMessage({
-      type: event.navigationType,
+      type: MESSAGE_LISTENERS.NAVIGATION_PUSH,
       url: event.destination.url
     })
     return
   }
+
+  if (event.navigationType !== "traverse") return
 
   const currentIndex = window.navigation.currentEntry?.index ?? -1
   const direction: TraverseDirection =

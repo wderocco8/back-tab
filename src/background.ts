@@ -46,6 +46,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     //   // console.log(graph.getActiveNode(tabId), graph.getGraph())
   }
 
+  if (request.type === MESSAGE_LISTENERS.NAVIGATION_PUSH) {
+    // Same-document (SPA) navigation — webNavigation.onCommitted never
+    // fires for these, so this is the only place they get added.
+    const tabId = sender.tab?.id
+    if (tabId === undefined) {
+      console.error("[background] NAVIGATION_PUSH received with no sender.tab")
+    } else {
+      console.log("[background] SPA push detected", { tabId, url: request.url })
+      graph.addNode(tabId, request.url)
+    }
+  }
+
   if (request.type === MESSAGE_LISTENERS.SET_ACTIVE_NODE) {
     const [tabId, nodeId] = [request.tabId, request.nodeId]
     const activeNode = graph.setActiveNode(tabId, nodeId)
