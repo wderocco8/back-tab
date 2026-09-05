@@ -57,7 +57,7 @@ export class Graph {
    * @param nodeId
    * @returns activeNode and true if the node was in the stack, false otherwise
    */
-  setActiveNode(
+  targetNode(
     tabId: number,
     nodeId: string
   ): { activeNode: GraphNode; nodeInStack: boolean; delta: number } {

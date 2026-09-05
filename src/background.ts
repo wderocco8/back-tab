@@ -3,19 +3,6 @@ import { Graph } from "@/graph"
 
 const graph = new Graph()
 
-// const lastUrls = new Map<number, string>() // tabId → last URL
-
-// // TODO: maybe implement de-duplication
-// function handleNav(tabId: number, url: string, source: string) {
-//   if (lastUrls.get(tabId) === url) return // prevent duplicates
-//   lastUrls.set(tabId, url)
-//   console.log(`[${source}] Navigation detected:`, url)
-//   graph.addNode(tabId, url)
-// }
-
-// Use to determine if naviagation is caused by extension or by the browser
-const extensionInitiatedNavigations = new Set<string>() // key: `${tabId}|${url}`
-
 // Handle messaging from background to popup
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   console.log("[background] receieved message", request)
@@ -73,16 +60,11 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.type === MESSAGE_LISTENERS.SET_ACTIVE_NODE) {
     const [tabId, nodeId] = [request.tabId, request.nodeId]
 
-    const { activeNode, nodeInStack, delta } = graph.setActiveNode(
-      tabId,
-      nodeId
-    )
+    const { activeNode, nodeInStack, delta } = graph.targetNode(tabId, nodeId)
     console.log("[background SET_ACTIVE_NODE]", activeNode, nodeInStack, delta)
 
-    const key = `${tabId}|${activeNode?.url}`
-    extensionInitiatedNavigations.add(key)
     if (nodeInStack) {
-      // history.go(delta) // TODO: why does history.go not work?
+      // history.go(delta) // TODO: why does history.go not work without chrome.scripting?
       chrome.scripting.executeScript({
         target: { tabId },
         func: (d: number, id: string) => {
@@ -94,7 +76,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         args: [delta, nodeId]
       })
     } else {
-      chrome.tabs.update({ url: activeNode?.url })
+      chrome.tabs.update({ url: activeNode.url })
     }
     chrome.runtime.sendMessage({
       type: "GRAPH_UPDATED",
@@ -126,15 +108,6 @@ chrome.webNavigation.onCommitted.addListener((details) => {
     transitionType,
     transitionQualifiers
   })
-
-  const key = `${details.tabId}|${details.url}`
-  const isExtensionNav = extensionInitiatedNavigations.has(key)
-
-  if (isExtensionNav) {
-    console.log("[webNavigation] Detected extension-initiated nav")
-    extensionInitiatedNavigations.delete(key) // clean up
-    return
-  }
 
   if (transitionQualifiers.includes("forward_back")) {
     console.log(
@@ -186,21 +159,4 @@ chrome.webNavigation.onCommitted.addListener((details) => {
       console.log("User used keyword_generated")
       break
   }
-
-  // TODO: this is deprecated temporarily -> ideally navigation-tracker should handle it instead...
-  // if (transitionQualifiers.includes("forward_back")) {
-  //   console.log("User used forward/back")
-  //   graph.goForwardBack(tabId, url)
-  //   // console.log(graph.getActiveNode(tabId), graph.getGraph())
-  // }
 })
-
-// chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
-//   if (details.frameId === 0) {
-//     console.log("[webNavigation] SPA route change detected", {
-//       url: details.url,
-//       transitionType: details.transitionType
-//     })
-//     graph.addNode(details.tabId, details.url)
-//   }
-// })
