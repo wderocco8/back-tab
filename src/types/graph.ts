@@ -17,6 +17,9 @@ export type GraphNode = {
   /** ID of the parent node (if any)... can also be used to access "back" navigation */
   parent: string | null
 
+  /** ID of the node which this node cloned from IFF that node was out of the stack */
+  revisitOf: string | null
+
   /** ID of the last node navigated to from this one using "forward" */
   lastForward: string | null
 }
@@ -27,4 +30,12 @@ export type NavigationSession = {
 
   /** Current position in stack */
   index: number
+}
+
+export type TabStack = {
+  /** List of nodeIds mirroring Chrome history stack */
+  entries: string[]
+
+  /** Current index of the stack */
+  cursor: number
 }

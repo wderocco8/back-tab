@@ -1,11 +1,16 @@
 import type { TraverseDirection } from "@/contents/navigation-tracker"
-import type { GraphNode, NavigationSession } from "@/types/graph"
+import type { GraphNode, NavigationSession, TabStack } from "@/types/graph"
 import { v4 as uuidv4 } from "uuid"
 
 export class Graph {
-  private nodes: Map<string, GraphNode> = new Map() // nodeId -> GraphNode
-  private tabToActiveNode: Map<number, string> = new Map() // tabId -> nodeId
-  private tabToNavigationSession: Map<number, NavigationSession> = new Map() // tabId -> NavigationSession
+  /** nodeId -> GraphNode */
+  private nodes: Map<string, GraphNode> = new Map()
+  /** tabId -> nodeId */
+  private tabToActiveNode: Map<number, string> = new Map()
+  /** tabId -> NavigationSession */
+  private tabToNavigationSession: Map<number, NavigationSession> = new Map()
+  /** tabId -> stack mirroring chrome history */
+  private tabToStack: Map<number, TabStack> = new Map()
 
   getGraph(): GraphNode[] {
     return Array.from(this.nodes.values())
@@ -27,6 +32,13 @@ export class Graph {
     return activeNodeId
   }
 
+  getStack(tabId: number): TabStack {
+    const stack = this.tabToStack.get(tabId)
+    if (!stack)
+      console.warn(`[Graph.getStack] stack for tabId (${tabId}) not found`)
+    return stack ?? { entries: [], cursor: -1 }
+  }
+
   getActiveNode(tabId: number): GraphNode {
     const nodeId = this.getActiveNodeId(tabId)
     const node = this.nodes.get(nodeId)
@@ -37,13 +49,39 @@ export class Graph {
     return node
   }
 
-  setActiveNode(tabId: number, nodeId: string): GraphNode {
-    this.tabToActiveNode.set(tabId, nodeId)
-    return this.getNode(nodeId)
+  /**
+   * Modifies the graph and stack to select `nodeId`.
+   * - If `nodeId` is in the stack, simply updates active node and cursor
+   * - Otherwise appends a copy of the node and makes it a child of the active node
+   * @param tabId
+   * @param nodeId
+   * @returns activeNode and true if the node was in the stack, false otherwise
+   */
+  setActiveNode(
+    tabId: number,
+    nodeId: string
+  ): { activeNode: GraphNode; nodeInStack: boolean; delta: number } {
+    const { entries, cursor } = this.getStack(tabId)
+    const nodeInStack = entries.includes(nodeId)
+    const newCursor = entries.indexOf(nodeId)
+    const delta = newCursor - cursor
+
+    if (nodeInStack) {
+      this.tabToActiveNode.set(tabId, nodeId)
+      this.tabToStack.set(tabId, {
+        entries,
+        cursor: newCursor
+      })
+    } else {
+      // TODO: I think this branch is not necessary? if we push to the new node of then the next
+      // chrome update should trigger "typed" transitionType in the background worker
+    }
+
+    return { activeNode: this.getNode(nodeId), nodeInStack, delta }
   }
 
   /**
-   * Adds a node to our url/tab graph.
+   * Adds a **new** node to our url/tab graph.
    * @param tabId ID of tab associated with node
    * @param url URL asscoaited with this node
    */
@@ -59,11 +97,20 @@ export class Graph {
       timeStamp: timestamp,
       children: [],
       parent: parentNodeId,
+      revisitOf: null,
       lastForward: null
     }
 
     // Add node to graph
     this.nodes.set(id, newNode)
+    // Add graph to stack, or initialize stack
+    const { entries, cursor } = this.getStack(tabId)
+    const newEntries = [...entries.slice(0, cursor + 1), id]
+    const newCursor = cursor + 1
+    this.tabToStack.set(tabId, {
+      entries: newEntries,
+      cursor: newCursor
+    })
 
     // Add node to parent's children (if possible)
     if (parentNodeId) {
@@ -80,75 +127,20 @@ export class Graph {
     return newNode
   }
 
-  /**
-   * @deprecated
-   */
-  goForwardBack(tabId: number, url: string) {
-    const activeNode = this.getActiveNode(tabId)
-    if (!activeNode) throw new Error("[Graph.goForwardBack] No active node set")
-
-    const backNode = activeNode.parent ? this.getNode(activeNode.parent) : null
-    const forwardNode = activeNode.lastForward
-      ? this.getNode(activeNode.lastForward)
-      : null
-
-    // TODO: fix edge case where back and forward share the same URL
-    // (it will choose back regardless currently)
-    let newActiveNode: string
-    if (backNode?.url === url) {
-      newActiveNode = backNode.id
-      backNode.lastForward = activeNode?.id
-    } else if (forwardNode?.url === url) {
-      newActiveNode = forwardNode.id
-      // TODO: I don't think we need to worry about forwardNode.parent (already persisted)
-    } else {
-      throw new Error(
-        "[Graph.goForwardBack] Back and forward url does not match."
-      )
-    }
-
-    this.tabToActiveNode.set(tabId, newActiveNode)
-  }
-
   traverse(
     tabId: number | undefined,
-    url: string,
     direction: TraverseDirection
   ) {
     if (!tabId) {
       console.error("[Graph.traverse] tabId is undefined?")
       return
     }
-    const activeNode = this.getActiveNode(tabId)
-    if (!activeNode) throw new Error("[Graph.traverse] No active node set")
+    const { entries, cursor } = this.getStack(tabId)
+    const delta = direction === "forward" ? 1 : -1
+    const newCursor = cursor + delta
+    const newActiveNodeId = entries[newCursor]
 
-    const backNode = activeNode.parent ? this.getNode(activeNode.parent) : null
-    const forwardNode = activeNode.lastForward
-      ? this.getNode(activeNode.lastForward)
-      : null
-
-    let newActiveNode: string | null = null
-    switch (direction) {
-      case "back":
-        if (backNode) {
-          newActiveNode = backNode.id
-          backNode.lastForward = activeNode?.id
-        } else {
-          console.error("[Graph.traverse] back-node does not exist?")
-        }
-        break
-
-      case "forward":
-        if (forwardNode) {
-          newActiveNode = forwardNode.id
-        } else {
-          console.error("[Graph.traverse] forward-node does not exist?")
-        }
-        break
-    }
-
-    if (newActiveNode) {
-      this.tabToActiveNode.set(tabId, newActiveNode)
-    }
+    this.tabToStack.set(tabId, { entries, cursor: newCursor })
+    this.tabToActiveNode.set(tabId, newActiveNodeId)
   }
 }
