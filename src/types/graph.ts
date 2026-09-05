@@ -19,9 +19,6 @@ export type GraphNode = {
 
   /** ID of the node which this node cloned from IFF that node was out of the stack */
   revisitOf: string | null
-
-  /** ID of the last node navigated to from this one using "forward" */
-  lastForward: string | null
 }
 
 export type NavigationSession = {

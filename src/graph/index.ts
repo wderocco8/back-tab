@@ -11,6 +11,8 @@ export class Graph {
   private tabToNavigationSession: Map<number, NavigationSession> = new Map()
   /** tabId -> stack mirroring chrome history */
   private tabToStack: Map<number, TabStack> = new Map()
+  /** tabId -> nodeId that the next added node is a revisit of */
+  private tabToPendingRevisit: Map<number, string> = new Map()
 
   getGraph(): GraphNode[] {
     return Array.from(this.nodes.values())
@@ -52,7 +54,8 @@ export class Graph {
   /**
    * Modifies the graph and stack to select `nodeId`.
    * - If `nodeId` is in the stack, simply updates active node and cursor
-   * - Otherwise appends a copy of the node and makes it a child of the active node
+   * - Otherwise records a pending revisit, so the node created by the resulting
+   *   navigation is linked back to `nodeId` via `revisitOf`
    * @param tabId
    * @param nodeId
    * @returns activeNode and true if the node was in the stack, false otherwise
@@ -73,8 +76,11 @@ export class Graph {
         cursor: newCursor
       })
     } else {
-      // TODO: I think this branch is not necessary? if we push to the new node of then the next
-      // chrome update should trigger "typed" transitionType in the background worker
+      // Chrome discarded this entry, so it can't be reached by traversal.
+      // chrome.tabs.update pushes a fresh entry and the resulting commit
+      // creates the node through addNode - leave a marker so that new node
+      // knows which node it is a revisit of.
+      this.tabToPendingRevisit.set(tabId, nodeId)
     }
 
     return { activeNode: this.getNode(nodeId), nodeInStack, delta }
@@ -90,6 +96,13 @@ export class Graph {
     const id = uuidv4()
 
     const parentNodeId = this.tabToActiveNode.get(tabId) ?? null
+
+    // Read-and-clear on every add, not just jump-initiated ones, so a
+    // tabs.update that never commits can't attach a stale revisitOf to an
+    // unrelated later navigation.
+    const revisitOf = this.tabToPendingRevisit.get(tabId) ?? null
+    this.tabToPendingRevisit.delete(tabId)
+
     const newNode: GraphNode = {
       id,
       tabId: tabId,
@@ -97,8 +110,7 @@ export class Graph {
       timeStamp: timestamp,
       children: [],
       parent: parentNodeId,
-      revisitOf: null,
-      lastForward: null
+      revisitOf
     }
 
     // Add node to graph
@@ -127,10 +139,7 @@ export class Graph {
     return newNode
   }
 
-  traverse(
-    tabId: number | undefined,
-    direction: TraverseDirection
-  ) {
+  traverse(tabId: number | undefined, direction: TraverseDirection) {
     if (!tabId) {
       console.error("[Graph.traverse] tabId is undefined?")
       return
