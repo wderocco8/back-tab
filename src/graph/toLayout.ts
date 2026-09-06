@@ -1,4 +1,4 @@
-import { DEFAULT_NODE_DIMENSIONS } from "@/constants"
+import { DEFAULT_NODE_DIMENSIONS, REVISIT_EDGE_KIND } from "@/constants"
 import dagre from "@dagrejs/dagre"
 import type { Edge, Node } from "@xyflow/react"
 
@@ -21,6 +21,9 @@ export default function applyDagreLayout(
   })
 
   edges.forEach((edge) => {
+    // Revisit edges are annotations, not structure. Feeding them to dagre
+    // would rank an original node below the revisit that points at it.
+    if (edge.data?.kind === REVISIT_EDGE_KIND) return
     dagreGraph.setEdge(edge.source, edge.target)
   })
 

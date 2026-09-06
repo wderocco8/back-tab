@@ -9,3 +9,9 @@ export const MESSAGE_LISTENERS = {
   NAVIGATION_TRAVERSE: "NAVIGATION_TRAVERSE",
   NAVIGATION_PUSH: "NAVIGATION_PUSH",
 }
+
+/**
+ * Marks an edge as an annotation rather than real navigation structure.
+ * Revisit edges are excluded from the dagre layout - see `toLayout.ts`.
+ */
+export const REVISIT_EDGE_KIND = "revisit"
