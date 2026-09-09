@@ -15,7 +15,7 @@ navigate, instead of the linear stack the back button gives you.
      project faster than everything under it.
      ========================================================================== -->
 
-_(screenshot / GIF of the graph view goes here)_
+https://github.com/user-attachments/assets/f1dae212-d81c-4b39-afa9-ced4b0295226
 
 ---
 
