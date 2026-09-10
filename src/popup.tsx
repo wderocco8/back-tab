@@ -3,10 +3,11 @@ import "@/styles/globals.css"
 
 import CustomNode from "@/components/CustomNode"
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider"
-import { MESSAGE_LISTENERS } from "@/constants"
 import { convertGraphToFlow } from "@/graph/toFlow"
 import applyDagreLayout from "@/graph/toLayout"
-import type { GraphNode } from "@/types/graph"
+import { parseMessage, sendMessage } from "@/lib/messaging"
+import type { FlowNode } from "@/types/graph"
+import { EXTENSION_PAGE_MESSAGE_TYPES, MESSAGE_TYPES } from "@/types/messages"
 import {
   Background,
   BackgroundVariant,
@@ -17,7 +18,6 @@ import {
   useNodesState,
   useReactFlow,
   type Edge,
-  type Node,
   type NodeMouseHandler
 } from "@xyflow/react"
 import { useCallback, useEffect } from "react"
@@ -30,26 +30,28 @@ const proOptions = { hideAttribution: true }
 
 function InnerPopup() {
   const { colorMode } = useTheme()
-  const [nodes, setNodes] = useNodesState<Node>([])
+  const [nodes, setNodes] = useNodesState<FlowNode>([])
   const [edges, setEdges] = useEdgesState<Edge>([])
   const { setViewport, fitView, zoomIn, zoomOut, getNode } = useReactFlow()
 
+  /** Refetches the graph for `tabId` and re-runs layout. */
   const updateGraph = (tabId: number) =>
-    chrome.runtime.sendMessage(
-      { type: MESSAGE_LISTENERS.GET_GRAPH, tabId: tabId },
-      (response) => {
-        const graph: GraphNode[] | undefined = response?.graph
-        const activeNodeId: string | undefined = response?.activeNodeId
-        if (graph && activeNodeId) {
-          const rawFlow = convertGraphToFlow(graph, activeNodeId, tabId)
-          const layoutFlow = applyDagreLayout(rawFlow.nodes, rawFlow.edges)
-          setNodes(layoutFlow.nodes)
-          setEdges(layoutFlow.edges)
-          // TODO: why is it not fitting by default
-          handleTransform(activeNodeId)
-        }
+    sendMessage({ type: MESSAGE_TYPES.GET_GRAPH, tabId }, (response) => {
+      // Undefined when the background threw before replying — most often
+      // because the tab has no recorded navigation yet.
+      if (!response) {
+        console.warn("[popup.tsx updateGraph] response undefined")
+        return
       }
-    )
+
+      const { graph, activeNodeId } = response
+      const rawFlow = convertGraphToFlow(graph, activeNodeId, tabId)
+      const layoutFlow = applyDagreLayout(rawFlow.nodes, rawFlow.edges)
+      setNodes(layoutFlow.nodes)
+      setEdges(layoutFlow.edges)
+      // TODO: why is it not fitting by default
+      handleTransform(activeNodeId)
+    })
 
   // 1) Initial graph load
   useEffect(() => {
@@ -63,16 +65,15 @@ function InnerPopup() {
 
   // 2) Listen for graph updates
   useEffect(() => {
-    const handleGraphUpdate = (
-      message: any,
-      sender: chrome.runtime.MessageSender
-    ) => {
+    const handleGraphUpdate = (message: unknown) => {
       console.log("A) handling graph update")
 
-      if (message.type === MESSAGE_LISTENERS.GRAPH_UPDATED) {
-        console.log("B) updating graph")
-        updateGraph(message.tabId)
-      }
+      // Every extension message lands here, so narrow before trusting it.
+      const parsed = parseMessage(message, EXTENSION_PAGE_MESSAGE_TYPES)
+      if (!parsed) return
+
+      console.log("B) updating graph")
+      updateGraph(parsed.tabId)
     }
 
     chrome.runtime.onMessage.addListener(handleGraphUpdate)
@@ -82,9 +83,9 @@ function InnerPopup() {
     }
   }, [])
 
-  const handleNodeClick: NodeMouseHandler<Node> = (_, node) => {
-    chrome.runtime.sendMessage({
-      type: MESSAGE_LISTENERS.SET_ACTIVE_NODE,
+  const handleNodeClick: NodeMouseHandler<FlowNode> = (_, node) => {
+    sendMessage({
+      type: MESSAGE_TYPES.SET_ACTIVE_NODE,
       nodeId: node.id,
       tabId: node.data.tabId
     })
@@ -92,6 +93,7 @@ function InnerPopup() {
     handleTransform(node.id)
   }
 
+  /** Pans and zooms the viewport to frame a single node. */
   const handleTransform = useCallback(
     (nodeId: string) => {
       const n = getNode(nodeId)

@@ -6,11 +6,20 @@ const dagreGraph = new dagre.graphlib.Graph()
 // TODO: is this needed?
 dagreGraph.setDefaultEdgeLabel(() => ({}))
 
-export default function applyDagreLayout(
-  nodes: Node[],
+/**
+ * Assigns positions to `nodes` with a dagre tree layout.
+ *
+ * Mutates each node's `position` in place and returns the same arrays. Edges
+ * tagged {@link REVISIT_EDGE_KIND} are annotations rather than structure and
+ * are excluded, so they cannot distort the ranking.
+ *
+ * @param direction dagre `rankdir`; defaults to top-to-bottom.
+ */
+export default function applyDagreLayout<T extends Node>(
+  nodes: T[],
   edges: Edge[],
   direction: "TB" | "BT" | "LR" | "RL" = "TB"
-): { nodes: Node[]; edges: Edge[] } {
+): { nodes: T[]; edges: Edge[] } {
   dagreGraph.setGraph({ rankdir: direction })
 
   nodes.forEach((node) => {

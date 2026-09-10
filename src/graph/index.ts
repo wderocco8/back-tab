@@ -1,7 +1,25 @@
-import type { TraverseDirection } from "@/contents/navigation-tracker"
-import type { GraphNode, NavigationSession, TabStack } from "@/types/graph"
+import type {
+  GraphNode,
+  NavigationSession,
+  TabStack,
+  TraverseDirection
+} from "@/types/graph"
 import { v4 as uuidv4 } from "uuid"
 
+/**
+ * The browsing history tree, plus a per-tab mirror of Chrome's session stack.
+ *
+ * Two structures kept in step:
+ * - `nodes` is append-only and never truncates, so branches the user abandoned
+ *   survive. This is what the popup draws.
+ * - `tabToStack` mirrors what Chrome's back/forward buttons will actually do,
+ *   holding node IDs (not URLs) so repeat visits to one URL stay distinct.
+ *
+ * The invariant tying them together: walking `parent` from a tab's active node
+ * yields exactly that tab's stack up to the cursor, reversed.
+ *
+ * All state is in memory, so it is lost when the MV3 worker terminates.
+ */
 export class Graph {
   /** nodeId -> GraphNode */
   private nodes: Map<string, GraphNode> = new Map()
@@ -14,10 +32,14 @@ export class Graph {
   /** tabId -> nodeId that the next added node is a revisit of */
   private tabToPendingRevisit: Map<number, string> = new Map()
 
+  /** Every node across every tab. Callers filter by `tabId` themselves. */
   getGraph(): GraphNode[] {
     return Array.from(this.nodes.values())
   }
 
+  /**
+   * @throws If no node with `nodeId` exists.
+   */
   getNode(nodeId: string): GraphNode {
     const node = this.nodes.get(nodeId)
     if (!node)
@@ -25,6 +47,12 @@ export class Graph {
     return node
   }
 
+  /**
+   * ID of the node `tabId` currently sits on.
+   *
+   * @throws If the tab has no recorded navigation yet — which includes every
+   * tab after the service worker restarts, since state is in memory only.
+   */
   getActiveNodeId(tabId: number): string {
     const activeNodeId = this.tabToActiveNode.get(tabId)
     if (!activeNodeId)
@@ -34,6 +62,12 @@ export class Graph {
     return activeNodeId
   }
 
+  /**
+   * The tab's mirror of Chrome's session history.
+   *
+   * Returns an empty stack (`cursor: -1`) for an unknown tab rather than
+   * throwing, so `addNode` can lazily initialise on a tab's first navigation.
+   */
   getStack(tabId: number): TabStack {
     const stack = this.tabToStack.get(tabId)
     if (!stack)
@@ -41,6 +75,9 @@ export class Graph {
     return stack ?? { entries: [], cursor: -1 }
   }
 
+  /**
+   * @throws If the tab has no active node, or it points at a missing node.
+   */
   getActiveNode(tabId: number): GraphNode {
     const nodeId = this.getActiveNodeId(tabId)
     const node = this.nodes.get(nodeId)
@@ -129,7 +166,6 @@ export class Graph {
       const parentNode = this.nodes.get(parentNodeId)
       if (parentNode) {
         parentNode.children.push(id)
-        // parentNode.lastForward = id
       }
     }
 
@@ -139,6 +175,15 @@ export class Graph {
     return newNode
   }
 
+  /**
+   * Moves the cursor one step for a back/forward the *user* performed.
+   *
+   * Do not call this for extension-initiated traversals: `targetNode` already
+   * moves the cursor, and a `history.go()` of any size still produces a single
+   * traverse event, so applying a step here would overshoot.
+   *
+   * @param tabId Undefined when the message arrived without a sender tab.
+   */
   traverse(tabId: number | undefined, direction: TraverseDirection) {
     if (!tabId) {
       console.error("[Graph.traverse] tabId is undefined?")

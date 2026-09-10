@@ -1,8 +1,16 @@
-import { MESSAGE_LISTENERS } from "@/constants"
+import { sendMessage } from "@/lib/messaging"
+import type { TraverseDirection } from "@/types/graph"
+import { MESSAGE_TYPES } from "@/types/messages"
 import type { PlasmoCSConfig } from "plasmo"
 
 declare global {
   interface Window {
+    /**
+     * Set by the background (via `chrome.scripting.executeScript` into this
+     * same isolated world) immediately before it calls `history.go()`, holding
+     * the node it is traversing to. Its presence on a `navigate` event marks
+     * that traversal as extension-initiated.
+     */
     __backTabPendingTraverse?: string | null
   }
 }
@@ -11,8 +19,6 @@ export const config: PlasmoCSConfig = {
   matches: ["https://*/*"],
   run_at: "document_start"
 }
-
-export type TraverseDirection = "forward" | "back"
 
 // Runs in the isolated world, which shares the page's DOM/BOM (including
 // window.navigation) but not the page's own JS globals or chrome.tabs /
@@ -26,12 +32,13 @@ window.navigation.addEventListener("navigate", (event) => {
   window.__backTabPendingTraverse = null
 
   if (
+    // NOTE: we do not include event.userInitiated as a requirement, otherwise it blocks many
+    // navigation pushes from SPAs.
     event.navigationType === "push" &&
-    // event.userInitiated &&
     event.destination.sameDocument
   ) {
-    chrome.runtime.sendMessage({
-      type: MESSAGE_LISTENERS.NAVIGATION_PUSH,
+    sendMessage({
+      type: MESSAGE_TYPES.NAVIGATION_PUSH,
       url: event.destination.url
     })
     return
@@ -47,10 +54,9 @@ window.navigation.addEventListener("navigate", (event) => {
     `[navigation-tracker] traverse event. index: ${currentIndex}, direction: ${direction}`
   )
 
-  chrome.runtime.sendMessage({
-    type: MESSAGE_LISTENERS.NAVIGATION_TRAVERSE,
-    url: event.destination.url,
+  sendMessage({
+    type: MESSAGE_TYPES.NAVIGATION_TRAVERSE,
     direction,
-    internalNodeId: pendingNodeId // non-null ⇒ we caused this
+    internalNodeId: pendingNodeId
   })
 })
