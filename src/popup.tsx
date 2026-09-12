@@ -40,7 +40,10 @@ function InnerPopup() {
       // Undefined when the background threw before replying — most often
       // because the tab has no recorded navigation yet.
       if (!response) {
-        console.warn("[popup.tsx updateGraph] response undefined")
+        console.warn(
+          "[popup] GET_GRAPH failed:",
+          chrome.runtime.lastError?.message
+        )
         return
       }
 

@@ -97,7 +97,8 @@ export type MessageOf<K extends MessageType> = K extends MessageType
 export type Message = MessageOf<MessageType>
 
 /** Resolves the response type for a given message. */
-export type ResponseFor<M extends Message> = MessageMapping[M["type"]]["response"]
+export type ResponseFor<M extends Message> =
+  MessageMapping[M["type"]]["response"]
 
 /**
  * Message types the background service worker accepts. A runtime list so
@@ -121,7 +122,7 @@ export type BackgroundMessage = MessageOf<
   (typeof BACKGROUND_MESSAGE_TYPES)[number]
 >
 
-/** Messages extension pages can receive. */
+/**  Messages extension pages can receive. */
 export type ExtensionPageMessage = MessageOf<
   (typeof EXTENSION_PAGE_MESSAGE_TYPES)[number]
 >
