@@ -12,9 +12,12 @@ npm run dev
 
 Open your browser and load the appropriate development build. For example, if you are developing for the chrome browser, using manifest v3, use: `build/chrome-mv3-dev`.
 
-You can start editing the popup by modifying `popup.tsx`. It should auto-update as you make changes. To add an options page, simply add a `options.tsx` file to the root of the project, with a react component default exported. Likewise to add a content page, add a `content.ts` file to the root of the project, importing some module and do some logic, then reload the extension on your browser.
+The popup lives in `src/popup.tsx`. Plasmo derives the manifest from file presence, so
+adding `src/options.tsx` creates an `options_ui` entry and `src/newtab.tsx` creates a
+`chrome_url_overrides.newtab` entry — both of which ship to users. Only add those files when
+there is real content for them.
 
-For further guidance, [visit our Documentation](https://docs.plasmo.com/)
+For further guidance, [visit our Documentation](https://docs.plasmo.com/).
 
 ## Viewing logs
 
@@ -38,13 +41,19 @@ Has no visible window of its own, so it needs a dedicated inspector:
 
 MV3 service workers go idle and terminate after a short period of inactivity — if the "service worker" link is grayed out or gone, trigger any extension event (e.g. navigate a tab) to wake it back up. The extension card's **Errors** button also captures uncaught exceptions here even when the console wasn't open at the time.
 
-### Extension UI pages (popup, newtab, options)
+> **Chrome will not terminate the worker while this inspector is attached.** That makes the
+> inspector useless for observing worker-lifetime behaviour: any `console.log` proving the
+> worker restarted requires the very window that prevents it from restarting. To test
+> lifetime, log to `chrome.storage` from the worker and read it back from the popup's
+> inspector instead. Note also that `plasmo dev` injects its own keepalive
+> (`setInterval(getPlatformInfo, 24e3)` plus an HMR WebSocket ping), so **lifetime testing
+> must use `build/chrome-mv3-prod`.**
 
-Each of these is a real page/tab and can be inspected like any normal webpage:
+### Extension UI pages
 
-- **Popup** (`popup.tsx`): open the popup, then right-click inside it → **Inspect** (or right-click the toolbar icon → "Inspect popup"). Opening DevTools keeps the popup pinned open instead of closing on blur.
-- **New tab** (`newtab.tsx`): open a new tab as usual, then F12 / right-click → **Inspect**.
-- **Options** (`options.tsx`): opens in its own tab (`open_in_tab: true` in the manifest), so F12 / right-click → **Inspect** works directly.
+- **Popup** (`src/popup.tsx`): open the popup, then right-click inside it → **Inspect** (or right-click the toolbar icon → "Inspect popup"). Opening DevTools keeps the popup pinned open instead of closing on blur.
+
+This is currently the only extension page. See the note above before adding others.
 
 ### All-in-one error view
 
