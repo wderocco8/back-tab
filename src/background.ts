@@ -89,6 +89,7 @@ chrome.runtime.onMessage.addListener(
         graph.addNode(senderTabId, request.url)
         console.log(graph.getStack(senderTabId))
         console.log(graph.getGraph())
+        // sendMessage({ type: MESSAGE_TYPES.GRAPH_UPDATED, tabId })
         break
       }
 
@@ -119,6 +120,8 @@ chrome.runtime.onMessage.addListener(
             },
             args: [delta, nodeId]
           })
+
+          sendMessage({ type: MESSAGE_TYPES.GRAPH_UPDATED, tabId })
         } else {
           // Chrome discarded this entry, so it cannot be traversed to. This
           // pushes a fresh history entry; the resulting commit is matched to
@@ -127,7 +130,6 @@ chrome.runtime.onMessage.addListener(
           chrome.tabs.update(tabId, { url: activeNode.url })
         }
 
-        sendMessage({ type: MESSAGE_TYPES.GRAPH_UPDATED, tabId })
         break
       }
 
@@ -185,6 +187,7 @@ chrome.webNavigation.onCommitted.addListener((details) => {
   // an existing node, and instead create a new node (fallback to transitionType switch statement).
   if (pendingJumpNode && pendingJumpNode.url === url) {
     graph.pushExisting(tabId, pendingJumpNode)
+    sendMessage({ type: MESSAGE_TYPES.GRAPH_UPDATED, tabId })
     return
   }
 
@@ -195,6 +198,7 @@ chrome.webNavigation.onCommitted.addListener((details) => {
       graph.addNode(tabId, url)
       console.log(graph.getStack(tabId))
       console.log(graph.getGraph())
+      sendMessage({ type: MESSAGE_TYPES.GRAPH_UPDATED, tabId })
       break
     case "typed":
       console.log("User typed a URL")
@@ -202,6 +206,7 @@ chrome.webNavigation.onCommitted.addListener((details) => {
       graph.addNode(tabId, url)
       console.log(graph.getStack(tabId))
       console.log(graph.getGraph())
+      sendMessage({ type: MESSAGE_TYPES.GRAPH_UPDATED, tabId })
       break
     case "auto_bookmark":
       console.log("User used a bookmark")
