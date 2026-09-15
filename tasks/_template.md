@@ -24,3 +24,8 @@ What to change. Name the files.
 ## Out of scope
 
 What was considered and deliberately excluded, and why — so it does not get re-litigated.
+
+## Related
+
+Link siblings by relative path, e.g. `[0006](0006-permission-diet.md)`. Anything listed in
+`depends_on` should usually be explained here too.

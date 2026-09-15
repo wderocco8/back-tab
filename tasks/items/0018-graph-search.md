@@ -13,4 +13,4 @@ updated: 2026-09-15
 Fuzzy find by title or URL, jumping the viewport to the match. Becomes genuinely useful once
 graphs span hours of browsing.
 
-**Prerequisite:** [[0008]] — searching raw URLs is close to useless.
+**Prerequisite:** [0008](0008-node-title-favicon.md) — searching raw URLs is close to useless.

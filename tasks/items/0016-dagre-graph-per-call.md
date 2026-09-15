@@ -31,11 +31,12 @@ popup no longer renders it.
 **Not currently visible**, because `getGraph()` always returns every node and nodes are never
 deleted, so each call passes a superset of the last and the upserts are idempotent.
 
-**It goes live the moment nodes can disappear between calls**, which is exactly what the
-lineage and retention work ([[0001]], [[0002]]) introduces. It would also surface if
-`GET_GRAPH` ever filters by tab in the background instead of sending everything and hiding
-client-side. Symptom would be phantom nodes pulling the layout off-centre and `fitView`
-framing empty space — hard to diagnose after the fact, which is why it is worth pre-empting.
+**It goes live the moment nodes can disappear between calls**, which is exactly what the lineage and
+retention work ([0001](0001-persist-graph-state.md), [0002](0002-lineage-ids.md)) introduces. It
+would also surface if `GET_GRAPH` ever filters by tab in the background instead of sending
+everything and hiding client-side. Symptom would be phantom nodes pulling the layout off-centre and
+`fitView` framing empty space — hard to diagnose after the fact, which is why it is worth
+pre-empting.
 
 **Fix:** move construction inside the function so each layout starts clean.
 

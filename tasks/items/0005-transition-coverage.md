@@ -42,9 +42,9 @@ But the Navigation API **does not fire `navigate` for cross-origin traversals** 
 already documented in the `NAVIGATION_TRAVERSE` comment in `src/types/messages.ts`. So every
 cross-origin back/forward silently desyncs the cursor and nothing ever corrects it.
 
-It compounds: `Graph.traverse` does not bounds-check (see [[0012]]). `entries[newCursor]` can
-be `undefined`, that gets written into `tabToActiveNode`, and from then on every
-`getActiveNodeId` throws — which hard-locks that tab's graph, since `GET_GRAPH` never
+It compounds: `Graph.traverse` does not bounds-check (see [0012](0012-traverse-bounds-check.md)).
+`entries[newCursor]` can be `undefined`, that gets written into `tabToActiveNode`, and from then on
+every `getActiveNodeId` throws — which hard-locks that tab's graph, since `GET_GRAPH` never
 replies once it starts throwing.
 
 **Fix:** reconcile in the background rather than trusting the content script. On a
@@ -58,4 +58,4 @@ that self-corrects beats one that wedges the tab.
 
 `chrome.webNavigation.onHistoryStateUpdated` and `onReferenceFragmentUpdated`. These are the
 background-side equivalent of the content script's `NAVIGATION_PUSH`, and adopting them is a
-prerequisite for [[0006]].
+prerequisite for [0006](0006-permission-diet.md).

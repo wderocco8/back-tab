@@ -10,7 +10,7 @@ created: 2026-09-15
 updated: 2026-09-15
 ---
 
-Required to make [[0003]] safe, not polish.
+Required to make [0003](0003-jump-to-existing-node.md) safe, not polish.
 
 Once jumps stop minting nodes, **back/forward are no longer the graph's parent/children**.
 After jumping, `entries` is `[A, C, B]` sitting on `B` — pressing back goes to `C`, which is

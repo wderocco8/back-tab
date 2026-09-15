@@ -25,4 +25,5 @@ this.tabToActiveNode.set(tabId, newActiveNodeId)
 **Fix:** clamp and bail before writing. Bounds-check unconditionally, not only on the
 reconciliation path.
 
-Independent, but the same failure mode is analysed in depth under [[0005]].
+Independent, but the same failure mode is analysed in depth under
+[0005](0005-transition-coverage.md).

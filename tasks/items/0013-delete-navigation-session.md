@@ -14,4 +14,4 @@ updated: 2026-09-15
 written. Delete it and the `NavigationSession` type.
 
 Carried over from the old `chrome.tabs.onRemoved` cleanup task, whose other half is
-superseded by [[0002]].
+superseded by [0002](0002-lineage-ids.md).

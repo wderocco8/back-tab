@@ -30,8 +30,8 @@ await Promise.allSettled(
 )
 ```
 
-Moot if [[0006]] removes the content script entirely — do that first and this half may
-disappear.
+Moot if [0006](0006-permission-diet.md) removes the content script entirely — do that first
+and this half may disappear.
 
 ## (b) `GET_GRAPH` throws for an unknown tab
 

@@ -16,10 +16,10 @@ Current manifest asks for `tabs`, `sessions`, `history`, `scripting`, `webNaviga
 ## Audit
 
 - `history` — zero usages anywhere in `src/`. Delete.
-- `sessions` — zero usages. Re-add only with [[0002]].
+- `sessions` — zero usages. Re-add only with [0002](0002-lineage-ids.md).
 - `tabs` — only `tab.id` is read from `chrome.tabs.query` and `chrome.tabs.update` is called.
-  Neither needs the permission. Probably droppable; verify. Note [[0008]] wants `favIconUrl`,
-  which does need it.
+  Neither needs the permission. Probably droppable; verify. Note [0008](0008-node-title-favicon.md)
+  wants `favIconUrl`, which does need it.
 - `scripting` — used for the `history.go()` injection. Works under `activeTab`.
 - `webNavigation` — genuinely needed, keep.
 - `https://*/*` — the expensive one. Triggers Chrome Web Store broad-host review and makes
@@ -31,11 +31,12 @@ Current manifest asks for `tabs`, `sessions`, `history`, `scripting`, `webNaviga
 It only does two jobs, both of which have background-side replacements:
 
 - SPA push detection → `webNavigation.onHistoryStateUpdated` + `onReferenceFragmentUpdated`
-- Traverse direction → URL-matching reconciliation on `forward_back` commits ([[0005]])
+- Traverse direction → URL-matching reconciliation on `forward_back` commits
+  ([0005](0005-transition-coverage.md))
 
-And `chrome.scripting.executeScript` for the `history.go()` jump works under `activeTab`,
-which is granted both by clicking the extension action (opening the popup) and by a
-`chrome.commands` keypress — the only two ways a jump is ever initiated (see [[0010]]).
+And `chrome.scripting.executeScript` for the `history.go()` jump works under `activeTab`, which is
+granted both by clicking the extension action (opening the popup) and by a `chrome.commands`
+keypress — the only two ways a jump is ever initiated (see [0010](0010-branch-jump-shortcut.md)).
 
 ## Target manifest
 

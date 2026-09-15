@@ -20,8 +20,9 @@ updated: 2026-09-15
 > 2. The Deletions section below is **not** finished. `REVISIT_EDGE_KIND` still exists in
 >    `src/constants/index.ts`, `src/graph/toFlow.ts:1` imports it without using it, and
 >    `src/graph/toLayout.ts:35` still tests `edge.data?.kind === REVISIT_EDGE_KIND` — a branch
->    nothing can satisfy now. Note [[0009]] may want that exclusion mechanism back for
->    cross-tab edges, so decide whether to delete it or repurpose it rather than reflexively
+>    nothing can satisfy now. Note [0009](0009-cross-tab-edges.md) may want that exclusion
+>    mechanism back for cross-tab edges, so decide whether to delete it or repurpose it
+>    rather than reflexively
 >    removing it.
 > 3. Verify against a production build, not `plasmo dev`.
 
@@ -138,6 +139,7 @@ URLs would collapse wrongly under one. Revisit after two weeks of real use.
 
 ## Sequencing
 
-**Not blocked on [[0002]].** The collapse is scoped per `tabId` today; lineage ids only
-change what that scope survives. Orthogonal — do this one first, it is smaller and it is the
-core value. Prerequisite for [[0010]] and [[0004]].
+**Not blocked on [0002](0002-lineage-ids.md).** The collapse is scoped per `tabId` today; lineage
+ids only change what that scope survives. Orthogonal — do this one first, it is smaller and it is
+the core value. Prerequisite for [0010](0010-branch-jump-shortcut.md) and
+[0004](0004-stack-overlay.md).

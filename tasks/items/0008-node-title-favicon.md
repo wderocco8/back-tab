@@ -15,8 +15,8 @@ with a raw URL in a hover tooltip — unreadable past roughly eight nodes, and i
 thing any user sees.
 
 Favicon inside the node plus title on hover changes the entire feel of the product. Both are
-available on the `chrome.tabs.Tab` object; `favIconUrl` needs `tabs` or host permission, so
-sequence this against [[0006]] (fall back to `https://www.google.com/s2/favicons` or a
+available on the `chrome.tabs.Tab` object; `favIconUrl` needs `tabs` or host permission, so sequence
+this against [0006](0006-permission-diet.md) (fall back to `https://www.google.com/s2/favicons` or a
 first-letter glyph if the permission is gone).
 
-Prerequisite for [[0018]].
+Prerequisite for [0018](0018-graph-search.md).

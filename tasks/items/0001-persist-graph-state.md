@@ -68,7 +68,8 @@ Load `build/chrome-mv3-prod` unpacked, browse, idle ~40s, reopen the popup. A ch
 
 ## Related
 
-Blocks [[0002]] (stale tab keys only matter once state survives), and the
-`chrome.tabs.onRemoved` cleanup is folded into that task. Retention/eviction makes [[0016]]
-a live bug rather than a latent one. An opt-in `local` setting is the likely first reason to
-re-add `src/options.tsx` (see [[0022]]).
+Blocks [0002](0002-lineage-ids.md) (stale tab keys only matter once state survives), and the
+`chrome.tabs.onRemoved` cleanup is folded into that task. Retention/eviction makes
+[0016](0016-dagre-graph-per-call.md) a live bug rather than a latent one. An opt-in `local` setting
+is the likely first reason to re-add `src/options.tsx` (see
+[0022](0022-remove-plasmo-boilerplate.md)).

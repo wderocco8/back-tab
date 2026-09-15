@@ -36,8 +36,8 @@ and does no runtime validation either.
 
 **Prerequisite:** incremental layout. Right now `applyDagreLayout` re-lays out the whole
 graph on every update, so a delta push would save the round trip but not the relayout — see
-[[0016]], which touches the same code.
+[0016](0016-dagre-graph-per-call.md), which touches the same code.
 
 **Caveat:** a long-lived port also keeps the service worker alive while the popup is open,
 which masks worker-lifetime bugs the same way the dev keepalive does. Not a reason to avoid
-it, but do not let it substitute for real persistence ([[0001]]).
+it, but do not let it substitute for real persistence ([0001](0001-persist-graph-state.md)).

@@ -44,9 +44,11 @@ each dependency exactly once.
   history and `git blame` stay intact for the whole life of a task.
 - **Ids are permanent.** Never renumber, never reuse. New task = next free number. A
   filename slug may be reworded; the `NNNN` prefix may not.
-- **Cross-reference with `[[0006]]`.** The generator fails the build on a link to a
-  nonexistent id, so refactors can't silently orphan a reference. Prefer a link over prose
-  like "the task above" — there is no "above" once tasks are separate files.
+- **Cross-reference with a real relative link:** `[0006](0006-permission-diet.md)`. Items are
+  siblings, so no directory prefix. The generator fails the build on a link to a nonexistent
+  id, and on one whose id and filename disagree — so renaming a slug can't silently orphan a
+  reference. Prefer a link over prose like "the task above"; there is no "above" once tasks
+  are separate files.
 - **Bodies are freeform.** Keep the analysis: the reason these files are worth more than
   Linear tickets is that they carry the evidence — code snippets, file paths, the trace that
   proves the bug, and what was deliberately ruled out. Write for the agent that picks this up

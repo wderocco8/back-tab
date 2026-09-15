@@ -44,7 +44,7 @@ Reattachment becomes one function instead of a per-case special case.
   a high-confidence match for the Ctrl+Shift+T case specifically. Fall back to URL + recency
   matching otherwise.
 - `chrome.tabs.onCreated` carries `openerTabId` — use it to inherit rather than adopt when
-  the new tab was spawned from a live one (see [[0009]]).
+  the new tab was spawned from a live one (see [0009](0009-cross-tab-edges.md)).
 
 ## Scope
 
@@ -52,11 +52,12 @@ Reattachment becomes one function instead of a per-case special case.
   `FlowNodeData`.
 - Messages still carry `tabId` (that is what the popup and content script know); the
   background resolves it to a lineage at the edge.
-- Re-add the `sessions` permission, which is currently declared but unused (see [[0006]]).
+- Re-add the `sessions` permission, which is currently declared but unused (see
+  [0006](0006-permission-diet.md)).
 
 ## Supersedes the old "clean up per-tab state on `chrome.tabs.onRemoved`" task
 
 That task proposed a `forgetTab(tabId)` clearing all four tabId-keyed maps. That answer is
 wrong under this design: on tab close we want to *keep* the lineage and drop only the
 `tabToLineage` entry. The one thing still true from it — `tabToNavigationSession` is dead
-code — is tracked separately as [[0013]].
+code — is tracked separately as [0013](0013-delete-navigation-session.md).

@@ -144,9 +144,25 @@ for (const task of tasks) {
     if (!byId.has(dep))
       errors.push(`${task.file}: depends_on "${dep}" does not exist`)
   }
+  // Cross-references are real relative links, so they must resolve AND the id in
+  // the link text must name the file it points at - a slug rename that updates
+  // only one half is exactly what this catches.
+  for (const [, text, target] of task.body.matchAll(
+    /\[(\d{4})\]\((\d{4}-[a-z0-9-]+\.md)\)/g
+  )) {
+    const referenced = byId.get(text)
+    if (!referenced) {
+      errors.push(`${task.file}: link [${text}] does not exist`)
+    } else if (referenced.file !== target) {
+      errors.push(
+        `${task.file}: link [${text}](${target}) should point at ${referenced.file}`
+      )
+    }
+  }
   for (const [, ref] of task.body.matchAll(/\[\[(\d{4})\]\]/g)) {
-    if (!byId.has(ref))
-      errors.push(`${task.file}: link [[${ref}]] does not exist`)
+    errors.push(
+      `${task.file}: [[${ref}]] is not a link - write [${ref}](${byId.get(ref)?.file ?? `${ref}-<slug>.md`})`
+    )
   }
 }
 

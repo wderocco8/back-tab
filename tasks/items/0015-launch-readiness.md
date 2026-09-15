@@ -15,13 +15,13 @@ during review.
 
 - [ ] **Privacy policy.** The extension records every URL visited. CWS requires a posted
       privacy policy for this data class, and the listing must declare it. Scope depends on
-      the `session` vs `local` decision in [[0001]].
+      the `session` vs `local` decision in [0001](0001-persist-graph-state.md).
 - [ ] **Lead with local-only.** "100 % local, never leaves your machine, no network requests"
       belongs in the listing headline, not the fine print. It is the main objection a user
       will have, and it happens to be true.
-- [ ] **Test against `build/chrome-mv3-prod`, not `plasmo dev`.** The dev keepalive hides the
-      entire class of service-worker lifetime bugs (see [[0001]]). Any pre-release smoke test
-      must run on the production bundle.
+- [ ] **Test against `build/chrome-mv3-prod`, not `plasmo dev`.** The dev keepalive hides the entire
+  class of service-worker lifetime bugs (see [0001](0001-persist-graph-state.md)). Any pre-release
+  smoke test must run on the production bundle.
 
-Related: [[0006]] is the other hard launch gate — broad host permissions trigger a slower
-review and a scary install prompt.
+Related: [0006](0006-permission-diet.md) is the other hard launch gate — broad host permissions
+trigger a slower review and a scary install prompt.

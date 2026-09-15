@@ -18,8 +18,9 @@ starting one — most design questions are already answered in it.
 - `INDEX.md` is **generated**. Never edit it. Run `pnpm tasks` after changing any item.
 - Adding or finishing a task means editing frontmatter in `tasks/items/NNNN-*.md`, then
   regenerating. Commit the item and the index together.
-- Ids are permanent. Cross-reference with `[[0006]]`; `pnpm tasks:check` fails on a dangling
-  link or dependency.
+- Ids are permanent. Cross-reference between tasks with a relative link —
+  `[0006](0006-permission-diet.md)`, siblings in `tasks/items/`. `pnpm tasks:check` fails on a
+  dangling link, a dependency that doesn't exist, or a link whose id and filename disagree.
 
 Architecture, the data model, and the non-obvious design decisions are in
 [README.md](README.md). Per-context logging and dev-mode gotchas are in

@@ -29,7 +29,7 @@ new tab page" keep-or-revert prompt, and CWS treats newtab overrides as a distin
 single-purpose category — shipping one from a history visualiser invites review friction.
 
 Re-add `src/options.tsx` when there is a real setting to put in it (the `session` vs `local`
-persistence choice in [[0001]] is the likely first one).
+persistence choice in [0001](0001-persist-graph-state.md) is the likely first one).
 
 Also updated `README.md`: dropped the newtab/options logging instructions, added a note that
 Plasmo generates manifest entries from file presence, and documented that Chrome will not
