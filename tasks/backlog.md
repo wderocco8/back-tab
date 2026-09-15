@@ -125,6 +125,168 @@ entry. Still true from that task: `tabToNavigationSession` is dead code — decl
 
 ## High
 
+### Jump to an existing node instead of minting a duplicate
+
+**This is the core-value task.** The `A → B → A → C`, jump-back-to-`B` case is the reason the
+extension exists, and today performing it degrades the graph.
+
+**What goes wrong now**
+
+`SET_ACTIVE_NODE` on a node Chrome has discarded sets a pending marker, calls
+`chrome.tabs.update`, and the resulting commit runs `addNode` — which mints a *new* node
+whose parent is `tabToActiveNode`, i.e. **wherever the user happened to be standing when
+they jumped**. So the tree encodes jump origin as navigation structure. On the most common
+real trace (a search page `G` with three results):
+
+```
+        G                          G
+     ╱  │  ╲                    ╱  │  ╲
+   r1  r2   r3    jump to r1  r1  r2   r3
+                  ─────────►          ╲
+                                       r1′ ⇠ ─ ─ r1
+                  jump to r2           ╲
+                                        r2′ ⇠ ─ ─ r2
+```
+
+Every jump grows a snake off the current node, `revisitOf` edges point back across the
+graph, dagre ranks the snake deeper each time, and `fitView` drifts away from the cluster
+that matters. Using the headline feature makes the view worse.
+
+**Fix: push the existing nodeId onto the stack, mint nothing**
+
+The stack bookkeeping is unchanged — `chrome.tabs.update` truncates forward entries and
+pushes one, which is exactly what `addNode` already does:
+
+```ts
+const newEntries = [...entries.slice(0, cursor + 1), id]
+```
+
+The only difference is *which* id gets pushed: the existing node rather than a fresh one.
+
+```ts
+/** Jump target already exists in the graph - push it, don't mint a node. */
+pushExisting(tabId: number, nodeId: string): void {
+  const { entries, cursor } = this.getStack(tabId)
+  this.tabToStack.set(tabId, {
+    entries: [...entries.slice(0, cursor + 1), nodeId],
+    cursor: cursor + 1
+  })
+  this.tabToActiveNode.set(tabId, nodeId)
+}
+```
+
+**Listener ordering is the whole trick.** The marker check must run before the
+`transitionType` switch and return, or the commit falls through to `addNode` and mints the
+duplicate anyway:
+
+```ts
+chrome.webNavigation.onCommitted.addListener((details) => {
+  const { tabId, url, frameId, transitionType, transitionQualifiers } = details
+  if (frameId !== 0) return
+
+  // Read-and-clear on every main-frame commit, so a tabs.update that never
+  // landed can't leak its marker into a later, unrelated navigation.
+  const pending = graph.takePendingJump(tabId)
+
+  if (transitionQualifiers.includes("forward_back")) return   // traverse path
+
+  if (pending && graph.getNode(pending).url === url) {
+    graph.pushExisting(tabId, pending)
+    return                              // never reaches the switch
+  }
+
+  switch (transitionType) { /* addNode paths */ }
+})
+```
+
+**Deliberately ignores `transitionType` on this path.** Extension-initiated `tabs.update` is
+not documented to report a stable transition (`link` vs `typed` is a coin flip), so the
+marker is the signal and the transition is irrelevant once we know we caused the navigation.
+
+**The URL guard is a real fallback, not decoration.** If `tabs.update` hits a redirect and
+lands somewhere other than `B.url`, the comparison fails and it falls through to `addNode` —
+correct, because the tab genuinely isn't where we aimed. Same for the rare race where the
+user clicks a link while the `tabs.update` is in flight.
+
+**Useful invariant that falls out:** `targetNode` only takes the push path when
+`entries.includes(nodeId)` is false, so **a nodeId can appear at most once in `entries`**.
+`indexOf` stays correct and `targetNode`'s lookup logic needs no changes.
+
+**Fix the stale broadcast while here (pre-existing bug).** `SET_ACTIVE_NODE` currently does:
+
+```ts
+chrome.tabs.update({ url: activeNode.url })
+sendMessage({ type: MESSAGE_TYPES.GRAPH_UPDATED, tabId })   // fires immediately
+```
+
+That broadcast goes out synchronously, well before the commit, so an open popup refetches
+and renders the *pre-jump* state. And `onCommitted` broadcasts nothing at all, so the popup
+never learns the jump landed — nor does it learn about any organic navigation. Under this
+change the mutation moves entirely to commit time, which makes the staleness worse unless
+the broadcast moves there too. Broadcast `GRAPH_UPDATED` from `onCommitted` after the graph
+mutates.
+
+**Deletions.** Net negative lines: `GraphNode.revisitOf`, the dashed-edge branch in
+`toFlow.ts`, `REVISIT_EDGE_KIND` in `constants/index.ts`, and the exclusion for it in
+`toLayout.ts`.
+
+**Explicitly out of scope: URL identity for organic navigation.** Repeat visits reached by
+actually navigating still mint new nodes. That is honest (the user really did navigate
+there again), it avoids any URL-equality heuristic, and SPAs with stable URLs would collapse
+wrongly under one. Revisit after two weeks of real use.
+
+**Not blocked on lineage ids.** The collapse is scoped per `tabId` today; the lineage task
+only changes what that scope survives. These are orthogonal — do this one first, it is
+smaller and it is the core value.
+
+**Prerequisite for:** the branch-jump keyboard shortcut, and the stack overlay below.
+
+---
+
+### Show the Chrome stack as an overlay on the graph
+
+Required to make the task above safe, not polish.
+
+Once jumps stop minting nodes, **back/forward are no longer the graph's parent/children**.
+After jumping, `entries` is `[A, C, B]` sitting on `B` — pressing back goes to `C`, which is
+`B`'s *sibling* in the tree. The edge `A→B` says nothing about what the back button does.
+
+The wrong fix is encoding the stack in the tree's shape; that is what produces the snake.
+The right fix is an overlay:
+
+> The tree shows what you explored. The overlay shows where Chrome can go.
+
+Three states, not two:
+
+| state | meaning | cost of jumping there |
+| --- | --- | --- |
+| **active** | `entries[cursor]` | — |
+| **in stack** | anywhere in `entries` | free, instant `history.go()` |
+| **off stack** | in the graph, not in `entries` | a real page load |
+
+The third is the useful one and is currently thrown away. Dimming off-stack nodes tells the
+user "this branch is gone from Chrome, going there costs a reload" — exactly the fact
+`revisitOf` was clumsily encoding in the graph's shape, now reduced to styling.
+
+Plus explicit back/forward badges on `entries[cursor - 1]` and `entries[cursor + 1]` so the
+browser buttons are never a mystery.
+
+**Wiring**
+
+```ts
+// GetGraphResponse
+{ graph, activeNodeId, backNodeId, forwardNodeId, stackNodeIds }
+
+// FlowNodeData
+{ ..., isActive, isBack, isForward, inStack }
+```
+
+**Hold off on** drawing a highlighted polyline through `entries` in order. The stack can jump
+across the tree (`A → C → B`), so the path would cut across unrelated edges. Ship the badges
+first; add the path only if orientation still feels lost.
+
+---
+
 ### Cover all `transitionType`s and `transitionQualifier`s
 
 `webNavigation.onCommitted` in `src/background.ts` switches on all 11 `transitionType`
@@ -286,7 +448,9 @@ now every one of those starts a disconnected tree with no relationship to where 
 
 Highest value-per-line item on the board. Connect the new tab's root node to the opener's
 active node as a child, tagged as a cross-tab edge so it can be styled differently (and
-possibly excluded from the dagre ranking, like revisit edges already are).
+possibly excluded from the dagre ranking — note that the `REVISIT_EDGE_KIND` exclusion this
+would have mirrored is itself being deleted, so `toLayout.ts` may need the exclusion
+mechanism reintroduced for this case).
 
 Depends on lineage ids — the edge should point at a lineage, not a `tabId`.
 
@@ -306,8 +470,18 @@ point**:
 In `A → B → A → C`: active is `C`, walk up to `A`, `A.children` is `[B, C]`, land on `B`.
 
 Mechanically this reuses `targetNode` unchanged. `B` is no longer in `entries` (the `A → C`
-push truncated it), so it takes the revisit path and creates a fresh node with
-`revisitOf: B` — which is the correct behaviour, not a workaround.
+push truncated it), so it takes the push-existing path: `B` is appended to `entries` and
+becomes active, and **the graph shape does not change**. That invariance is the point — the
+shortcut is meant to be pressed constantly, so it must not accumulate anything.
+
+**Prerequisite:** "Jump to an existing node instead of minting a duplicate" — without it,
+every shortcut press grows the snake, which is worse than the popup case because the
+shortcut is meant to be used constantly.
+
+**Interaction shape: alt-tab, not click-a-graph.** Press once to jump to the most recently
+abandoned sibling at the nearest branch point; press again within a second to cycle to the
+next. No popup, no clicking. The graph becomes the thing opened when genuinely lost, which
+also lowers how much the layout has to carry.
 
 **Use `chrome.commands`, not an injected keydown handler.** It works regardless of page
 focus, never fights with a site's own shortcuts (Gmail, Notion), and — important for the
@@ -355,9 +529,10 @@ useEffect(() => {
 Small, independent, no design work needed.
 
 - **`chrome.tabs.update` is missing its `tabId`.** `src/background.ts` calls
-  `chrome.tabs.update({ url: activeNode.url })` in the `SET_ACTIVE_NODE` revisit branch. With
+  `chrome.tabs.update({ url: activeNode.url })` in the `SET_ACTIVE_NODE` jump branch. With
   no tab id that navigates whatever tab is currently active, not `tabId`. Should be
-  `chrome.tabs.update(tabId, { url: activeNode.url })`.
+  `chrome.tabs.update(tabId, { url: activeNode.url })`. Folded into the push-existing task if
+that lands first, but it is a one-word fix and worth doing immediately either way.
 - **`Graph.traverse` needs bounds checking.** `entries[newCursor]` can be `undefined` when
   the cursor walks off either end, and that gets written into `tabToActiveNode`, permanently
   breaking `getActiveNodeId` for that tab. Clamp and bail. (Detailed under the
