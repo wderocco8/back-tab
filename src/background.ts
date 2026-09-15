@@ -47,7 +47,10 @@ chrome.runtime.onMessage.addListener(
 
       case MESSAGE_TYPES.NAVIGATION_TRAVERSE: {
         const { direction, internalNodeId } = request
-        console.log("[background] traverse detected", { senderTabId, direction })
+        console.log("[background] traverse detected", {
+          senderTabId,
+          direction
+        })
 
         if (internalNodeId) {
           // We caused this traversal, and targetNode already moved the cursor.
@@ -95,7 +98,12 @@ chrome.runtime.onMessage.addListener(
           tabId,
           nodeId
         )
-        console.log("[background SET_ACTIVE_NODE]", activeNode, nodeInStack, delta)
+        console.log(
+          "[background SET_ACTIVE_NODE]",
+          activeNode,
+          nodeInStack,
+          delta
+        )
 
         if (nodeInStack) {
           // A real traversal: no new history entry, forward entries survive.
@@ -162,10 +170,19 @@ chrome.webNavigation.onCommitted.addListener((details) => {
     transitionQualifiers
   })
 
+  const pendingJumpNode = graph.takePendingJump(tabId)
+
   if (transitionQualifiers.includes("forward_back")) {
     console.log(
       "[webNavigation] forward/back navigation — handled by navigation-tracker, skipping addNode"
     )
+    return
+  }
+
+  // If `tabs.update` hits a redirect or lands somewhere that is not the expected jump url, we do not push to
+  // an existing node, and instead create a new node (fallback to transitionType switch statement).
+  if (pendingJumpNode && pendingJumpNode.url === url) {
+    graph.pushExisting(tabId, pendingJumpNode)
     return
   }
 

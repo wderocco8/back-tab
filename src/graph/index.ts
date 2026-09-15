@@ -29,8 +29,8 @@ export class Graph {
   private tabToNavigationSession: Map<number, NavigationSession> = new Map()
   /** tabId -> stack mirroring chrome history */
   private tabToStack: Map<number, TabStack> = new Map()
-  /** tabId -> nodeId that the next added node is a revisit of */
-  private tabToPendingRevisit: Map<number, string> = new Map()
+  /** tabId -> nodeId that the we are trying to "jump" to (a node that is not in `tabToStack`, but is in `nodes`) */
+  private tabToPendingJump: Map<number, string> = new Map()
 
   /** Every node across every tab. Callers filter by `tabId` themselves. */
   getGraph(): GraphNode[] {
@@ -91,8 +91,10 @@ export class Graph {
   /**
    * Modifies the graph and stack to select `nodeId`.
    * - If `nodeId` is in the stack, simply updates active node and cursor
-   * - Otherwise records a pending revisit, so the node created by the resulting
-   *   navigation is linked back to `nodeId` via `revisitOf`
+   * - Otherwise records a pending jump, so the `chrome.tabs.update` that is
+   *   subsequently called doesn't trigger a new node event, but rather a
+   *   `pushExisting` event.
+   *
    * @param tabId
    * @param nodeId
    * @returns activeNode and true if the node was in the stack, false otherwise
@@ -117,7 +119,7 @@ export class Graph {
       // chrome.tabs.update pushes a fresh entry and the resulting commit
       // creates the node through addNode - leave a marker so that new node
       // knows which node it is a revisit of.
-      this.tabToPendingRevisit.set(tabId, nodeId)
+      this.tabToPendingJump.set(tabId, nodeId)
     }
 
     return { activeNode: this.getNode(nodeId), nodeInStack, delta }
@@ -137,8 +139,8 @@ export class Graph {
     // Read-and-clear on every add, not just jump-initiated ones, so a
     // tabs.update that never commits can't attach a stale revisitOf to an
     // unrelated later navigation.
-    const revisitOf = this.tabToPendingRevisit.get(tabId) ?? null
-    this.tabToPendingRevisit.delete(tabId)
+    const revisitOf = this.tabToPendingJump.get(tabId) ?? null
+    this.tabToPendingJump.delete(tabId)
 
     const newNode: GraphNode = {
       id,
@@ -196,5 +198,43 @@ export class Graph {
 
     this.tabToStack.set(tabId, { entries, cursor: newCursor })
     this.tabToActiveNode.set(tabId, newActiveNodeId)
+  }
+
+  /**
+   * Called when a navigation is `onCommitted`:
+   * - Checks for a pending jump and extracts the `nodeId`.
+   * - Clears the pending jump.
+   *
+   * @param tabId
+   * @returns `GraphNode` node pending jump if defined else `undefined`
+   */
+  takePendingJump(tabId: number): GraphNode | undefined {
+    const nodeId = this.tabToPendingJump.get(tabId)
+    this.tabToPendingJump.delete(tabId)
+    if (nodeId == undefined) {
+      return
+    }
+    return this.getNode(nodeId)
+  }
+
+  /**
+   * Updates state to reflect jump to existing node.
+   * - Clears stack past cursor.
+   * - Appends `node.id` to stack.
+   * - Updates active node to `node.id`
+   * @param tabId
+   * @param node
+   */
+  pushExisting(tabId: number, node: GraphNode) {
+    // Only update the stack, not the graph
+    const { entries, cursor } = this.getStack(tabId)
+    const newEntries = [...entries.slice(0, cursor + 1), node.id]
+    const newCursor = cursor + 1
+    this.tabToStack.set(tabId, {
+      entries: newEntries,
+      cursor: newCursor
+    })
+    // Update active node
+    this.tabToActiveNode.set(tabId, node.id)
   }
 }
