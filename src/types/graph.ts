@@ -25,13 +25,6 @@ export type GraphNode = {
    * yields exactly the tab's session stack up to the cursor, reversed.
    */
   parent: string | null
-
-  /**
-   * ID of the node this one re-visits, set when the user clicked a node Chrome
-   * had already dropped from the stack. Purely an annotation: `parent` still
-   * points at wherever the user actually was. Rendered as a dashed edge.
-   */
-  revisitOf: string | null
 }
 
 export type NavigationSession = {

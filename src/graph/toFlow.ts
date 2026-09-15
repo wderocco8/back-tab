@@ -52,23 +52,6 @@ export function convertGraphToFlow(
         target: childId
       })
     }
-
-    // Handle revisit edge: this node was created by jumping to a node Chrome
-    // had already dropped from the stack, so point back at the original. This
-    // is an annotation, not navigation structure - `toLayout` skips it so the
-    // original doesn't get ranked below its own revisit.
-    if (node.revisitOf) {
-      edges.push({
-        id: `r[${node.id}]-[${node.revisitOf}]`,
-        source: node.id,
-        target: node.revisitOf,
-        type: "straight",
-        data: { kind: REVISIT_EDGE_KIND },
-        style: { strokeDasharray: "4 4", strokeWidth: 1, opacity: 0.6 },
-        markerEnd: { type: MarkerType.Arrow },
-        hidden
-      })
-    }
   }
 
   return { nodes, edges }

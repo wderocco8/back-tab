@@ -148,8 +148,7 @@ export class Graph {
       url,
       timeStamp: timestamp,
       children: [],
-      parent: parentNodeId,
-      revisitOf
+      parent: parentNodeId
     }
 
     // Add node to graph
