@@ -15,8 +15,13 @@ import { v4 as uuidv4 } from "uuid"
  * - `tabToStack` mirrors what Chrome's back/forward buttons will actually do,
  *   holding node IDs (not URLs) so repeat visits to one URL stay distinct.
  *
- * The invariant tying them together: walking `parent` from a tab's active node
- * yields exactly that tab's stack up to the cursor, reversed.
+ * The two are deliberately NOT isomorphic. `parent` records where a page was
+ * reached from; `tabToStack` records what Chrome's back/forward can reach. A
+ * jump to a discarded node appends it to the stack without touching the tree,
+ * so after `A -> B -> back -> A -> C -> jump(B)` the stack is `[A, C, B]` while
+ * B's parent is still A. Walking `parent` therefore does not reproduce the
+ * stack, and the popup must render the stack as an overlay rather than infer it
+ * from the tree's shape.
  *
  * All state is in memory, so it is lost when the MV3 worker terminates.
  */
@@ -116,9 +121,10 @@ export class Graph {
       })
     } else {
       // Chrome discarded this entry, so it can't be reached by traversal.
-      // chrome.tabs.update pushes a fresh entry and the resulting commit
-      // creates the node through addNode - leave a marker so that new node
-      // knows which node it is a revisit of.
+      // The caller navigates with chrome.tabs.update, which pushes a fresh
+      // history entry; this marker lets the resulting commit recognise the
+      // navigation as ours and reuse `nodeId` via `pushExisting` instead of
+      // minting a duplicate node.
       this.tabToPendingJump.set(tabId, nodeId)
     }
 
@@ -136,12 +142,10 @@ export class Graph {
 
     const parentNodeId = this.tabToActiveNode.get(tabId) ?? null
 
-    // Read-and-clear on every add, not just jump-initiated ones, so a
-    // tabs.update that never commits can't attach a stale revisitOf to an
-    // unrelated later navigation.
-    const revisitOf = this.tabToPendingJump.get(tabId) ?? null
-    this.tabToPendingJump.delete(tabId)
-
+    // Deliberately does not touch `tabToPendingJump`. `takePendingJump` is its
+    // only consumer: `addNode` is also reached from NAVIGATION_PUSH, which never
+    // passes through webNavigation, so consuming the marker here would let an
+    // SPA push swallow a jump that has not committed yet.
     const newNode: GraphNode = {
       id,
       tabId: tabId,
@@ -200,20 +204,33 @@ export class Graph {
   }
 
   /**
-   * Called when a navigation is `onCommitted`:
-   * - Checks for a pending jump and extracts the `nodeId`.
-   * - Clears the pending jump.
+   * Reads and clears the pending jump marker for `tabId`.
    *
-   * @param tabId
-   * @returns `GraphNode` node pending jump if defined else `undefined`
+   * The sole consumer of `tabToPendingJump`. Called on every main-frame commit,
+   * not only jump-initiated ones, so a `tabs.update` that never lands cannot
+   * leak its marker into an unrelated later navigation.
+   *
+   * Resolves to `undefined` rather than throwing when the marker names a node
+   * that no longer exists: this runs inside the `webNavigation` listener, where
+   * a throw would break navigation tracking for the tab entirely. Unreachable
+   * while nodes are never deleted, but retention/eviction will make it possible.
+   *
+   * @param tabId Tab whose marker to consume.
+   * @returns The node being jumped to, or `undefined` if there is no live marker.
    */
   takePendingJump(tabId: number): GraphNode | undefined {
     const nodeId = this.tabToPendingJump.get(tabId)
     this.tabToPendingJump.delete(tabId)
-    if (nodeId == undefined) {
-      return
+    if (nodeId === undefined) return undefined
+
+    const node = this.nodes.get(nodeId)
+    if (!node) {
+      console.warn(
+        `[Graph.takePendingJump] pending jump for tabId (${tabId}) named a missing node (${nodeId})`
+      )
+      return undefined
     }
-    return this.getNode(nodeId)
+    return node
   }
 
   /**

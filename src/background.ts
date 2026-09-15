@@ -120,9 +120,11 @@ chrome.runtime.onMessage.addListener(
             args: [delta, nodeId]
           })
         } else {
-          // Chrome discarded this entry, so it cannot be traversed to. The
-          // resulting commit creates a revisit node via webNavigation below.
-          chrome.tabs.update({ url: activeNode.url })
+          // Chrome discarded this entry, so it cannot be traversed to. This
+          // pushes a fresh history entry; the resulting commit is matched to
+          // the pending-jump marker in webNavigation below, which reuses the
+          // existing node rather than creating one.
+          chrome.tabs.update(tabId, { url: activeNode.url })
         }
 
         sendMessage({ type: MESSAGE_TYPES.GRAPH_UPDATED, tabId })

@@ -21,8 +21,12 @@ export type GraphNode = {
   children: string[]
 
   /**
-   * ID of the parent node (if any). Walking `parent` from the active node
-   * yields exactly the tab's session stack up to the cursor, reversed.
+   * ID of the parent node (if any) - the page this one was reached *from*.
+   *
+   * Not the same as the tab's session stack: a jump to a node Chrome has
+   * discarded appends it to the stack without re-parenting it, so the back
+   * button may lead to a sibling rather than to `parent`. See the note on
+   * {@link TabStack}.
    */
   parent: string | null
 }
@@ -41,6 +45,10 @@ export type NavigationSession = {
  * Holds node IDs rather than URLs so repeat visits to the same URL stay
  * distinguishable. Must copy Chrome's truncation semantics: pushing while the
  * cursor is mid-stack discards everything ahead of it.
+ *
+ * A node ID appears at most once in `entries`: a jump only pushes when the node
+ * is absent (`Graph.targetNode` traverses instead when it is present), so
+ * `indexOf` is unambiguous.
  */
 export type TabStack = {
   /** List of nodeIds mirroring Chrome history stack */
