@@ -6,7 +6,7 @@ navigate, instead of the linear stack the back button gives you.
 > **Status — IN-PROGRESS.** Not on the Chrome Web Store; it runs as an
 > unpacked development build. Graph construction, rendering, and traversal work. Nothing
 > persists across service-worker restarts, and several navigation types are still
-> uncaptured. See [Limitations](#limitations) and [`tasks/backlog.md`](tasks/backlog.md).
+> uncaptured. See [Limitations](#limitations) and [`tasks/INDEX.md`](tasks/INDEX.md).
 
 <!-- ==========================================================================
      SCREENSHOT PLACEHOLDER — replace the line below with a GIF of the popup:

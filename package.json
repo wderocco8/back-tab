@@ -8,7 +8,9 @@
     "dev": "plasmo dev",
     "build": "plasmo build",
     "package": "plasmo package",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "tasks": "node tasks/build-index.mts",
+    "tasks:check": "node tasks/build-index.mts --check"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.4",
