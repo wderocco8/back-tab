@@ -1,4 +1,4 @@
-import { DEFAULT_NODE_DIMENSIONS, REVISIT_EDGE_KIND } from "@/constants"
+import { DEFAULT_NODE_DIMENSIONS } from "@/constants"
 import dagre from "@dagrejs/dagre"
 import type { Edge, Node } from "@xyflow/react"
 
@@ -9,9 +9,7 @@ dagreGraph.setDefaultEdgeLabel(() => ({}))
 /**
  * Assigns positions to `nodes` with a dagre tree layout.
  *
- * Mutates each node's `position` in place and returns the same arrays. Edges
- * tagged {@link REVISIT_EDGE_KIND} are annotations rather than structure and
- * are excluded, so they cannot distort the ranking.
+ * Mutates each node's `position` in place and returns the same arrays.
  *
  * @param direction dagre `rankdir`; defaults to top-to-bottom.
  */
@@ -30,9 +28,6 @@ export default function applyDagreLayout<T extends Node>(
   })
 
   edges.forEach((edge) => {
-    // Revisit edges are annotations, not structure. Feeding them to dagre
-    // would rank an original node below the revisit that points at it.
-    if (edge.data?.kind === REVISIT_EDGE_KIND) return
     dagreGraph.setEdge(edge.source, edge.target)
   })
 

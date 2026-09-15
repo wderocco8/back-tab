@@ -1,4 +1,4 @@
-import { DEFAULT_NODE_DIMENSIONS, REVISIT_EDGE_KIND } from "@/constants"
+import { DEFAULT_NODE_DIMENSIONS } from "@/constants"
 import type { FlowNode, GraphNode } from "@/types/graph"
 import { MarkerType, type Edge } from "@xyflow/react"
 
