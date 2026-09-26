@@ -6,6 +6,21 @@ import type {
 } from "@/types/graph"
 import { v4 as uuidv4 } from "uuid"
 
+/** Oldest entries are dropped past this, so the log can't grow unbounded. */
+const LOG_LIMIT = 200
+
+/**
+ * One state transition, for debugging stack drift. Stacks are pre-rendered
+ * strings so `console.table(graph.getLog())` reads without expanding anything.
+ */
+export type GraphLogEntry = {
+  event: string
+  tabId: number
+  detail: string
+  before: string
+  after: string
+}
+
 /**
  * The browsing history tree, plus a per-tab mirror of Chrome's session stack.
  *
@@ -36,6 +51,48 @@ export class Graph {
   private tabToStack: Map<number, TabStack> = new Map()
   /** tabId -> nodeId that the we are trying to "jump" to (a node that is not in `tabToStack`, but is in `nodes`) */
   private tabToPendingJump: Map<number, string> = new Map()
+  /** Ring buffer of recent mutations, newest last. */
+  private log: GraphLogEntry[] = []
+
+  getLog(): GraphLogEntry[] {
+    return [...this.log]
+  }
+
+  private label(nodeId: string | undefined): string {
+    if (nodeId === undefined) return "undefined"
+    const url = this.nodes.get(nodeId)?.url ?? "?"
+    // The id suffix keeps repeat visits to one URL distinguishable.
+    return `${url.replace(/^https?:\/\//, "").slice(0, 40)}#${nodeId.slice(0, 4)}`
+  }
+
+  /**
+   * Renders the tab's stack with the cursor entry in brackets. Only flags
+   * `active` and `pending` when they disagree with the stack or are set, so
+   * a healthy row stays short and an inconsistent one stands out.
+   */
+  private describe(tabId: number): string {
+    const { entries, cursor } = this.tabToStack.get(tabId) ?? {
+      entries: [],
+      cursor: -1
+    }
+    const parts = entries.map((id, i) =>
+      i === cursor ? `[${this.label(id)}]` : this.label(id)
+    )
+    if (cursor < 0 || cursor >= entries.length) parts.push(`cursor=${cursor}`)
+
+    const active = this.tabToActiveNode.get(tabId)
+    if (active !== entries[cursor]) parts.push(`active=${this.label(active)}`)
+
+    const pending = this.tabToPendingJump.get(tabId)
+    if (pending !== undefined) parts.push(`pending=${this.label(pending)}`)
+
+    return parts.join(" → ")
+  }
+
+  private record(event: string, tabId: number, before: string, detail = "") {
+    this.log.push({ event, tabId, detail, before, after: this.describe(tabId) })
+    if (this.log.length > LOG_LIMIT) this.log.shift()
+  }
 
   /** Every node across every tab. Callers filter by `tabId` themselves. */
   getGraph(): GraphNode[] {
@@ -108,6 +165,7 @@ export class Graph {
     tabId: number,
     nodeId: string
   ): { activeNode: GraphNode; nodeInStack: boolean; delta: number } {
+    const before = this.describe(tabId)
     const { entries, cursor } = this.getStack(tabId)
     const nodeInStack = entries.includes(nodeId)
     const newCursor = entries.indexOf(nodeId)
@@ -128,6 +186,12 @@ export class Graph {
       this.tabToPendingJump.set(tabId, nodeId)
     }
 
+    this.record(
+      "targetNode",
+      tabId,
+      before,
+      `${this.label(nodeId)} ${nodeInStack ? `go(${delta})` : "tabs.update"}`
+    )
     return { activeNode: this.getNode(nodeId), nodeInStack, delta }
   }
 
@@ -137,6 +201,7 @@ export class Graph {
    * @param url URL asscoaited with this node
    */
   addNode(tabId: number, url: string): GraphNode {
+    const before = this.describe(tabId)
     const timestamp = Date.now()
     const id = uuidv4()
 
@@ -177,6 +242,7 @@ export class Graph {
     // Update active node
     this.tabToActiveNode.set(tabId, id)
 
+    this.record("addNode", tabId, before, url)
     return newNode
   }
 
@@ -194,6 +260,7 @@ export class Graph {
       console.error("[Graph.traverse] tabId is undefined?")
       return
     }
+    const before = this.describe(tabId)
     const { entries, cursor } = this.getStack(tabId)
     const delta = direction === "forward" ? 1 : -1
     const newCursor = cursor + delta
@@ -201,6 +268,7 @@ export class Graph {
 
     this.tabToStack.set(tabId, { entries, cursor: newCursor })
     this.tabToActiveNode.set(tabId, newActiveNodeId)
+    this.record("traverse", tabId, before, direction)
   }
 
   /**
@@ -220,8 +288,11 @@ export class Graph {
    */
   takePendingJump(tabId: number): GraphNode | undefined {
     const nodeId = this.tabToPendingJump.get(tabId)
-    this.tabToPendingJump.delete(tabId)
     if (nodeId === undefined) return undefined
+    const before = this.describe(tabId)
+    this.tabToPendingJump.delete(tabId)
+    // Logged only when a marker existed; this runs on every main-frame commit.
+    this.record("takePendingJump", tabId, before, this.label(nodeId))
 
     const node = this.nodes.get(nodeId)
     if (!node) {
@@ -242,6 +313,7 @@ export class Graph {
    * @param node
    */
   pushExisting(tabId: number, node: GraphNode) {
+    const before = this.describe(tabId)
     // Only update the stack, not the graph
     const { entries, cursor } = this.getStack(tabId)
     const newEntries = [...entries.slice(0, cursor + 1), node.id]
@@ -252,5 +324,6 @@ export class Graph {
     })
     // Update active node
     this.tabToActiveNode.set(tabId, node.id)
+    this.record("pushExisting", tabId, before, this.label(node.id))
   }
 }

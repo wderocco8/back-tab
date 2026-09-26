@@ -8,6 +8,10 @@ import {
 
 const graph = new Graph()
 
+if (process.env.NODE_ENV === "development") {
+  Object.assign(globalThis, { graph })
+}
+
 /**
  * Routes messages from the popup and the content script.
  *
