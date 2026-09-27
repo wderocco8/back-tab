@@ -9,6 +9,15 @@ import { v4 as uuidv4 } from "uuid"
 /** Oldest entries are dropped past this, so the log can't grow unbounded. */
 const LOG_LIMIT = 200
 
+export type GraphLogDescribeStack = [string, string][]
+
+export type GraphLogDescribe = {
+  stack: GraphLogDescribeStack
+  cursor: number
+  active: string | undefined
+  pending: string | undefined
+}
+
 /**
  * One state transition, for debugging stack drift. Stacks are pre-rendered
  * strings so `console.table(graph.getLog())` reads without expanding anything.
@@ -17,8 +26,8 @@ export type GraphLogEntry = {
   event: string
   tabId: number
   detail: string
-  before: string
-  after: string
+  before: GraphLogDescribe
+  after: GraphLogDescribe
 }
 
 /**
@@ -70,26 +79,34 @@ export class Graph {
    * `active` and `pending` when they disagree with the stack or are set, so
    * a healthy row stays short and an inconsistent one stands out.
    */
-  private describe(tabId: number): string {
+  private describe(tabId: number): GraphLogDescribe {
     const { entries, cursor } = this.tabToStack.get(tabId) ?? {
       entries: [],
       cursor: -1
     }
-    const parts = entries.map((id, i) =>
-      i === cursor ? `[${this.label(id)}]` : this.label(id)
-    )
-    if (cursor < 0 || cursor >= entries.length) parts.push(`cursor=${cursor}`)
-
+    const stack: GraphLogDescribeStack = entries.map((nodeId) => {
+      const url = this.nodes.get(nodeId)?.url ?? "?"
+      return [nodeId, url]
+    })
     const active = this.tabToActiveNode.get(tabId)
-    if (active !== entries[cursor]) parts.push(`active=${this.label(active)}`)
-
     const pending = this.tabToPendingJump.get(tabId)
-    if (pending !== undefined) parts.push(`pending=${this.label(pending)}`)
 
-    return parts.join(" → ")
+    const parts = {
+      stack,
+      cursor,
+      active,
+      pending
+    }
+
+    return parts
   }
 
-  private record(event: string, tabId: number, before: string, detail = "") {
+  private record(
+    event: string,
+    tabId: number,
+    before: GraphLogDescribe,
+    detail = ""
+  ) {
     this.log.push({ event, tabId, detail, before, after: this.describe(tabId) })
     if (this.log.length > LOG_LIMIT) this.log.shift()
   }
