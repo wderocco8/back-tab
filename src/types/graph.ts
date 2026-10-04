@@ -39,6 +39,14 @@ export type NavigationSession = {
   index: number
 }
 
+export type StackEntry = {
+  /** ID of node in Graph for this slot */
+  nodeId: string
+
+  /** navigation.currentEntry.key for this slot; null when no content script could run (NTP, chrome://) */
+  key: string | null
+}
+
 /**
  * Mirror of Chrome's session history for one tab.
  *
@@ -51,8 +59,8 @@ export type NavigationSession = {
  * `indexOf` is unambiguous.
  */
 export type TabStack = {
-  /** List of nodeIds mirroring Chrome history stack */
-  entries: string[]
+  /** List of entries mirroring Chrome history stack */
+  entries: StackEntry[]
 
   /** Current index of the stack */
   cursor: number

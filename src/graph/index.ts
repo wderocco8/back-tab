@@ -107,6 +107,7 @@ export class Graph {
     before: GraphLogDescribe,
     detail = ""
   ) {
+    console.log("describing event:", event)
     this.log.push({ event, tabId, detail, before, after: this.describe(tabId) })
     if (this.log.length > LOG_LIMIT) this.log.shift()
   }

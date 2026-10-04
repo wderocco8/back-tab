@@ -20,6 +20,17 @@ export const config: PlasmoCSConfig = {
   run_at: "document_start"
 }
 
+const report = () => {
+  const entry = window.navigation.currentEntry
+  // if (entry?.key)
+  //   sendMessage({ type: MESSAGE_TYPES.ENTRY, key: entry.key, url: entry.url })
+  console.log("currentEntry", entry)
+}
+
+report() // full page load (incl. cross-origin traversal)
+window.navigation.addEventListener("currententrychange", report) // same-page push / replace / traverse
+window.addEventListener("pageshow", (e) => e.persisted && report()) // restored from back/forward cache
+
 // Runs in the isolated world, which shares the page's DOM/BOM (including
 // window.navigation) but not the page's own JS globals or chrome.tabs /
 // chrome.webNavigation / chrome.history (those are background-only).
