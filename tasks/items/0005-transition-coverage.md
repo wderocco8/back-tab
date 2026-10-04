@@ -1,61 +1,74 @@
 ---
 id: 0005
-title: Cover all transitionTypes and transitionQualifiers
+title: onCommitted — pages without a content script, and transition metadata
 status: backlog
 priority: high
 area: background
 tags: [correctness, webnavigation]
-depends_on: []
+depends_on: [0023]
 created: 2026-09-15
-updated: 2026-09-15
+updated: 2026-10-04
 ---
 
-`webNavigation.onCommitted` in `src/background.ts` switches on all 11 `transitionType`
-members but six are silent no-ops that should create nodes. The qualifiers matter more than
-the types and are barely handled.
+> **Rescoped 2026-10-04.** This task originally made `onCommitted` the source of truth for
+> traversal, reconciling `forward_back` commits by matching URLs against neighbouring stack
+> entries. That is ambiguous in the `A → B → A` case and was rejected as the core mechanism.
+> [0023](0023-track-slots-by-entry-key.md) moves stack mutation for normal pages to the content
+> script's `currentEntry.key` report. What is left for `onCommitted` is below.
 
-## Types
+## 1. Pages no content script can run on
 
-| transitionType | current | should be |
+The new-tab page, `chrome://` pages, the Web Store, the PDF viewer, `view-source:`, and
+`file://` by default. No key report ever arrives from them.
+
+Today the new-tab page's commit isn't `link` or `typed`, so it never becomes a node: after
+`NTP → type A` the stack is `[A]`, back has nowhere to go, and the cursor walks to `-1`. That
+is the reported base case.
+
+- **New commit to an unscriptable URL** → `addNode(tabId, url, null)`. A `null`-key entry.
+- **`forward_back` commit to an unscriptable URL** → compare `url` with the neighbouring
+  entries' nodes (`cursor - 1`, `cursor + 1`). Move only if exactly one matches; otherwise
+  log and leave the cursor. Because [0023](0023-track-slots-by-entry-key.md)'s cursor is
+  absolute, the next key report from a normal page corrects any mistake here.
+
+**Verify first:** whether `onCommitted` fires at all for `chrome://newtab` / the Google NTP and
+other `chrome://` pages, and which URL it reports. Check with the `Graph` ring buffer.
+
+**Decide:** how to classify a URL as unscriptable. A static list (anything outside the content
+script's `matches`, plus the Web Store hosts) is deterministic; "no key report within N ms" is
+racy. Prefer the list.
+
+## 2. Transition metadata
+
+Once nodes are created from key reports, most of the old type/qualifier table resolves
+itself: every new slot is a node, regardless of how it was reached.
+
+| transitionType / qualifier | before | after [0023](0023-track-slots-by-entry-key.md) |
 | --- | --- | --- |
-| `link`, `typed` | addNode | correct |
-| `form_submit` | no-op | addNode — it is a real history entry |
-| `auto_bookmark` | no-op | addNode |
-| `generated`, `keyword`, `keyword_generated` | no-op | addNode (omnibox) |
-| `start_page` | no-op | addNode as root (session restore) |
-| `reload` | no-op | update the existing node in place (title/timestamp), do not add |
-| `auto_subframe`, `manual_subframe` | no-op | dead code — the `frameId !== 0` guard already returned |
+| `link`, `typed` | addNode | node from key report |
+| `form_submit`, `auto_bookmark`, `generated`, `keyword`, `keyword_generated` | silently dropped | node from key report — fixed for free |
+| `reload` | no-op | same key → cursor unchanged — fixed for free |
+| `server_redirect` | would duplicate | no new slot; one report from the final URL — fixed for free |
+| `client_redirect` | duplicate node | replace: same key, new URL — see 0023's "known key, different URL" decision |
+| `start_page` | no-op | session restore — out of scope, see [0002](0002-lineage-ids.md) |
+| `auto_subframe`, `manual_subframe` | no-op | dead code — the `frameId !== 0` guard already returned. Delete. |
 
-## Qualifiers
+What remains is *recording* the transition, e.g. a `transition` field on `GraphNode` so the
+popup can tell typed from link from form submit. Correlation: `onCommitted` fires before the
+new document's content script runs, so stash `lastCommit[tabId] = { url, transitionType,
+transitionQualifiers }` and let the `ENTRY` handler consume it when the URL matches. Clear it on
+consumption, as `takePendingJump` does, so it can't leak into a later navigation.
 
-- `server_redirect` — creates no new history entry. Must *update* the existing node's URL,
-  not append a second node.
-- `client_redirect` — replaces the entry inside the redirect window. Currently produces a
-  duplicate node.
-- `from_address_bar` — informational only.
-- `forward_back` — see below, this one is a correctness hole.
+## Out of scope / ruled out
 
-## The `forward_back` desync (the real bug here)
+- **URL-matching reconciliation for all `forward_back` commits.** Ambiguous whenever both
+  neighbours share a URL; see [0023](0023-track-slots-by-entry-key.md).
+- **`onHistoryStateUpdated` / `onReferenceFragmentUpdated`.** Were proposed to replace the
+  content script's SPA detection. The content script stays and `currententrychange` covers
+  same-document navigation with real push/replace/traverse distinction, which these events
+  lack.
 
-`background.ts` returns early on `forward_back` and defers entirely to the content script.
-But the Navigation API **does not fire `navigate` for cross-origin traversals** — this is
-already documented in the `NAVIGATION_TRAVERSE` comment in `src/types/messages.ts`. So every
-cross-origin back/forward silently desyncs the cursor and nothing ever corrects it.
+## Related
 
-It compounds: `Graph.traverse` does not bounds-check (see [0012](0012-traverse-bounds-check.md)).
-`entries[newCursor]` can be `undefined`, that gets written into `tabToActiveNode`, and from then on
-every `getActiveNodeId` throws — which hard-locks that tab's graph, since `GET_GRAPH` never
-replies once it starts throwing.
-
-**Fix:** reconcile in the background rather than trusting the content script. On a
-`forward_back` commit, compare `details.url` against `entries[cursor - 1]` and
-`entries[cursor + 1]` and move the cursor to whichever matches. Use the content script's
-`internalNodeId`/`direction` as a fast path when it arrives, and bounds-check in `traverse`
-unconditionally. Ambiguity when both neighbours share a URL is acceptable; a wrong cursor
-that self-corrects beats one that wedges the tab.
-
-## Also missing
-
-`chrome.webNavigation.onHistoryStateUpdated` and `onReferenceFragmentUpdated`. These are the
-background-side equivalent of the content script's `NAVIGATION_PUSH`, and adopting them is a
-prerequisite for [0006](0006-permission-diet.md).
+Depends on [0023](0023-track-slots-by-entry-key.md). The cursor-wedge failure is
+[0012](0012-traverse-bounds-check.md), superseded by 0023.

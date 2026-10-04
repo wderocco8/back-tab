@@ -5,9 +5,9 @@ status: backlog
 priority: high
 area: background
 tags: [correctness, bootstrap]
-depends_on: [0006]
+depends_on: [0023]
 created: 2026-09-15
-updated: 2026-09-15
+updated: 2026-10-04
 ---
 
 Two distinct failures when the extension loads (install, update, or browser start) with tabs
@@ -15,11 +15,13 @@ already open.
 
 ## (a) No content script in pre-existing tabs
 
-Declarative `matches` only inject on future page loads, so SPA push tracking is dead in every
-already-open tab until it is reloaded. Bootstrap on `onInstalled` / `onStartup`:
+Declarative `matches` only inject on future page loads, so all tracking from the content script
+— which after [0023](0023-track-slots-by-entry-key.md) is every stack mutation on normal pages —
+is dead in every already-open tab until it is reloaded. Bootstrap on `onInstalled` /
+`onStartup`:
 
 ```ts
-const tabs = await chrome.tabs.query({ url: "https://*/*" })
+const tabs = await chrome.tabs.query({ url: ["http://*/*", "https://*/*"] })
 await Promise.allSettled(
   tabs.map((t) =>
     chrome.scripting.executeScript({
@@ -30,8 +32,9 @@ await Promise.allSettled(
 )
 ```
 
-Moot if [0006](0006-permission-diet.md) removes the content script entirely — do that first
-and this half may disappear.
+No longer moot: [0006](0006-permission-diet.md) keeps the content script. The injected script
+reports its current key on first run, which seeds the tab's stack with one entry. History
+before injection is unknowable — accept a single root, don't try to reconstruct it.
 
 ## (b) `GET_GRAPH` throws for an unknown tab
 

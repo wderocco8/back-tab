@@ -7,7 +7,7 @@ area: background
 tags: [core-value, graph]
 depends_on: []
 created: 2026-09-15
-updated: 2026-09-15
+updated: 2026-10-04
 ---
 
 > **Status note (2026-09-15):** largely implemented on `release/0.1.0`. `pushExisting`,
@@ -25,6 +25,10 @@ updated: 2026-09-15
 >    rather than reflexively
 >    removing it.
 > 3. Verify against a production build, not `plasmo dev`.
+>
+> **Note (2026-10-04):** [0023](0023-track-slots-by-entry-key.md) moves the pending-jump
+> consumption from `onCommitted` into the content script's key-report handler. The approach
+> below (marker → `pushExisting`, URL guard) carries over unchanged; only the listener changes.
 
 **This is the core-value task.** The `A → B → A → C`, jump-back-to-`B` case is the reason the
 extension exists, and today performing it degrades the graph.

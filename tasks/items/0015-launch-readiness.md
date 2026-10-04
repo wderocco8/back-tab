@@ -7,7 +7,7 @@ area: release
 tags: [launch, cws]
 depends_on: []
 created: 2026-09-15
-updated: 2026-09-15
+updated: 2026-10-04
 ---
 
 Blocking on publishing to the Chrome Web Store, tracked here so it does not get discovered
@@ -24,4 +24,5 @@ during review.
   smoke test must run on the production bundle.
 
 Related: [0006](0006-permission-diet.md) is the other hard launch gate — broad host permissions
-trigger a slower review and a scary install prompt.
+are kept deliberately, so the listing and permission justification must explain them; expect a
+slower review.

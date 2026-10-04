@@ -58,11 +58,11 @@ manifest — a newtab override triggers a Chrome keep-or-revert prompt and a str
 Store review category. Three such scaffold files once shipped this way; see
 [`0022`](tasks/items/0022-remove-plasmo-boilerplate.md).
 
-**Permissions are being actively reduced, not added.** The manifest currently asks for
-`host_permissions: ["https://*/*"]`, which reads as _"Read and change all your data on all
-websites"_ at install. Task [`0006`](tasks/items/0006-permission-diet.md) is a deliberate
-push to zero host permissions. Do not add a permission to make something easier without
-saying so explicitly and checking it against that task.
+**Permissions are being actively reduced, not added.** Broad host access is kept on purpose —
+exact back/forward tracking needs a content script on every page
+([`0023`](tasks/items/0023-track-slots-by-entry-key.md)) — but everything else is being cut
+in [`0006`](tasks/items/0006-permission-diet.md). Do not add a permission to make something
+easier without saying so explicitly and checking it against that task.
 
 ## Conventions
 

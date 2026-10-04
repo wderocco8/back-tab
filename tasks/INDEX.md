@@ -2,7 +2,7 @@
 
 # Task index
 
-20 open · 1 done · updated 2026-09-15
+20 open · 1 done · updated 2026-10-04
 
 ## In progress (1)
 
@@ -17,10 +17,10 @@ No unfinished dependencies - pick from the top.
 | id | task | priority | area | blocked by |
 | --- | --- | --- | --- | --- |
 | [0001](items/0001-persist-graph-state.md) | Persist graph state across service worker restarts | critical | background | — |
-| [0005](items/0005-transition-coverage.md) | Cover all transitionTypes and transitionQualifiers | high | background | — |
+| [0023](items/0023-track-slots-by-entry-key.md) | Track history slots by navigation.currentEntry.key, not traverse direction | critical | background | — |
+| [0006](items/0006-permission-diet.md) | Permission diet — drop unused permissions, justify the content script | high | manifest | — |
 | [0008](items/0008-node-title-favicon.md) | Store title and favIconUrl on GraphNode | medium | graph | — |
 | [0011](items/0011-popup-focus-active-node.md) | Popup does not zoom to the active node | medium | popup | — |
-| [0012](items/0012-traverse-bounds-check.md) | Graph.traverse needs bounds checking | medium | graph | — |
 | [0013](items/0013-delete-navigation-session.md) | Delete tabToNavigationSession and the NavigationSession type | medium | graph | — |
 | [0014](items/0014-popup-full-view.md) | Open the graph in a full tab view | medium | popup | — |
 | [0015](items/0015-launch-readiness.md) | Launch readiness | medium | release | — |
@@ -35,8 +35,8 @@ Waiting on the dependency in the last column.
 | --- | --- | --- | --- | --- |
 | [0002](items/0002-lineage-ids.md) | Decouple graph identity from tabId (lineage ids) | critical | background | `0001` |
 | [0004](items/0004-stack-overlay.md) | Show the Chrome stack as an overlay on the graph | high | popup | `0003` |
-| [0006](items/0006-permission-diet.md) | Permission diet — get to zero host permissions | high | manifest | `0005` |
-| [0007](items/0007-initialise-open-tabs.md) | Initialise tabs that were already open | high | background | `0006` |
+| [0005](items/0005-transition-coverage.md) | onCommitted — pages without a content script, and transition metadata | high | background | `0023` |
+| [0007](items/0007-initialise-open-tabs.md) | Initialise tabs that were already open | high | background | `0023` |
 | [0009](items/0009-cross-tab-edges.md) | Cross-tab edges via openerTabId | medium | background | `0002` |
 | [0010](items/0010-branch-jump-shortcut.md) | Branch-jump keyboard shortcut | medium | background | `0003` |
 | [0018](items/0018-graph-search.md) | Search across the graph | low | popup | `0008` |
@@ -49,10 +49,11 @@ Waiting on the dependency in the last column.
 | --- | --- | --- | --- | --- |
 | [0022](items/0022-remove-plasmo-boilerplate.md) | Remove shipped Plasmo boilerplate | high | manifest | — |
 
-## Won't do (1)
+## Won't do (2)
 
 | id | task | priority | area | blocked by |
 | --- | --- | --- | --- | --- |
+| [0012](items/0012-traverse-bounds-check.md) | Graph.traverse needs bounds checking | medium | graph | — |
 | [0021](items/0021-sync-multi-device.md) | Sync / multi-device / sharing | low | product | — |
 
 ## Dependency graph
@@ -63,8 +64,7 @@ graph LR
   0002["0002 Decouple graph identity from tabId (lineage ids)"]
   0003["0003 Jump to an existing node instead of minting a duplicate"]
   0004["0004 Show the Chrome stack as an overlay on the graph"]
-  0005["0005 Cover all transitionTypes and transitionQualifiers"]
-  0006["0006 Permission diet — get to zero host permissions"]
+  0005["0005 onCommitted — pages without a content script, and transition metadata"]
   0007["0007 Initialise tabs that were already open"]
   0008["0008 Store title and favIconUrl on GraphNode"]
   0009["0009 Cross-tab edges via openerTabId"]
@@ -73,10 +73,11 @@ graph LR
   0018["0018 Search across the graph"]
   0019["0019 Cross-tab / session-level view"]
   0020["0020 Evaluate Plasmo Ports for the popup's graph subscription"]
+  0023["0023 Track history slots by navigation.currentEntry.key, not traverse direction"]
   0001 --> 0002
   0003 --> 0004
-  0005 --> 0006
-  0006 --> 0007
+  0023 --> 0005
+  0023 --> 0007
   0002 --> 0009
   0003 --> 0010
   0008 --> 0018
