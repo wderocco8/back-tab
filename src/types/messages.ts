@@ -17,6 +17,8 @@ export const MESSAGE_TYPES = {
   NAVIGATION_PUSH: "NAVIGATION_PUSH",
   /** Content script → background. */
   NAVIGATION_TRAVERSE: "NAVIGATION_TRAVERSE",
+  /** Content script → background. */
+  NAVIGATION_ENTRY: "NAVIGATION_ENTRY",
   /** Background → extension pages. */
   GRAPH_UPDATED: "GRAPH_UPDATED"
 } as const
@@ -76,6 +78,10 @@ type MessageMapping = {
     request: { direction: TraverseDirection; internalNodeId: string | null }
     response: void
   }
+  [MESSAGE_TYPES.NAVIGATION_ENTRY]: {
+    request: { key: string; url: string | null }
+    response: void
+  }
   [MESSAGE_TYPES.GRAPH_UPDATED]: {
     /** Broadcast after the graph changes, so open pages refetch. */
     request: { tabId: number }
@@ -108,8 +114,9 @@ export type ResponseFor<M extends Message> =
 export const BACKGROUND_MESSAGE_TYPES = [
   MESSAGE_TYPES.GET_GRAPH,
   MESSAGE_TYPES.SET_ACTIVE_NODE,
-  MESSAGE_TYPES.NAVIGATION_PUSH,
-  MESSAGE_TYPES.NAVIGATION_TRAVERSE
+  // MESSAGE_TYPES.NAVIGATION_PUSH,
+  // MESSAGE_TYPES.NAVIGATION_TRAVERSE,
+  MESSAGE_TYPES.NAVIGATION_ENTRY
 ] as const satisfies readonly MessageType[]
 
 /** Message types extension pages (popup, options, newtab) accept. */

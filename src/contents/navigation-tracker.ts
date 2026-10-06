@@ -11,7 +11,7 @@ declare global {
      * the node it is traversing to. Its presence on a `navigate` event marks
      * that traversal as extension-initiated.
      */
-    __backTabPendingTraverse?: string | null
+    __backTabPendingJumpNodeId?: string | null
   }
 }
 
@@ -22,52 +22,61 @@ export const config: PlasmoCSConfig = {
 
 const report = () => {
   const entry = window.navigation.currentEntry
-  // if (entry?.key)
-  //   sendMessage({ type: MESSAGE_TYPES.ENTRY, key: entry.key, url: entry.url })
-  console.log("currentEntry", entry)
+
+  if (entry?.key) {
+    console.log("currentEntry sending message", entry)
+
+    sendMessage({
+      type: MESSAGE_TYPES.NAVIGATION_ENTRY,
+      key: entry.key,
+      url: entry.url,
+    })
+  } else {
+    console.warn("currentEntry missing key", entry)
+  }
 }
 
 report() // full page load (incl. cross-origin traversal)
 window.navigation.addEventListener("currententrychange", report) // same-page push / replace / traverse
 window.addEventListener("pageshow", (e) => e.persisted && report()) // restored from back/forward cache
 
-// Runs in the isolated world, which shares the page's DOM/BOM (including
-// window.navigation) but not the page's own JS globals or chrome.tabs /
-// chrome.webNavigation / chrome.history (those are background-only).
-window.navigation.addEventListener("navigate", (event) => {
-  console.log("[navigation-tracker] navigate event", event.navigationType)
+// // Runs in the isolated world, which shares the page's DOM/BOM (including
+// // window.navigation) but not the page's own JS globals or chrome.tabs /
+// // chrome.webNavigation / chrome.history (those are background-only).
+// window.navigation.addEventListener("navigate", (event) => {
+//   console.log("[navigation-tracker] navigate event", event.navigationType)
 
-  // Consume on every navigation, not just traversals, so a marker left behind
-  // by a go() that didn't navigate can't leak into a later event.
-  const pendingNodeId = window.__backTabPendingTraverse ?? null
-  window.__backTabPendingTraverse = null
+//   // Consume on every navigation, not just traversals, so a marker left behind
+//   // by a go() that didn't navigate can't leak into a later event.
+//   const pendingNodeId = window.__backTabPendingTraverse ?? null
+//   window.__backTabPendingTraverse = null
 
-  if (
-    // NOTE: we do not include event.userInitiated as a requirement, otherwise it blocks many
-    // navigation pushes from SPAs.
-    event.navigationType === "push" &&
-    event.destination.sameDocument
-  ) {
-    sendMessage({
-      type: MESSAGE_TYPES.NAVIGATION_PUSH,
-      url: event.destination.url
-    })
-    return
-  }
+//   if (
+//     // NOTE: we do not include event.userInitiated as a requirement, otherwise it blocks many
+//     // navigation pushes from SPAs.
+//     event.navigationType === "push" &&
+//     event.destination.sameDocument
+//   ) {
+//     sendMessage({
+//       type: MESSAGE_TYPES.NAVIGATION_PUSH,
+//       url: event.destination.url
+//     })
+//     return
+//   }
 
-  if (event.navigationType !== "traverse") return
+//   if (event.navigationType !== "traverse") return
 
-  const currentIndex = window.navigation.currentEntry?.index ?? -1
-  const direction: TraverseDirection =
-    event.destination.index > currentIndex ? "forward" : "back"
+//   const currentIndex = window.navigation.currentEntry?.index ?? -1
+//   const direction: TraverseDirection =
+//     event.destination.index > currentIndex ? "forward" : "back"
 
-  console.log(
-    `[navigation-tracker] traverse event. index: ${currentIndex}, direction: ${direction}`
-  )
+//   console.log(
+//     `[navigation-tracker] traverse event. index: ${currentIndex}, direction: ${direction}`
+//   )
 
-  sendMessage({
-    type: MESSAGE_TYPES.NAVIGATION_TRAVERSE,
-    direction,
-    internalNodeId: pendingNodeId
-  })
-})
+//   sendMessage({
+//     type: MESSAGE_TYPES.NAVIGATION_TRAVERSE,
+//     direction,
+//     internalNodeId: pendingNodeId
+//   })
+// })

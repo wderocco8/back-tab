@@ -1,6 +1,7 @@
 import type {
   GraphNode,
   NavigationSession,
+  StackEntry,
   TabStack,
   TraverseDirection
 } from "@/types/graph"
@@ -9,7 +10,7 @@ import { v4 as uuidv4 } from "uuid"
 /** Oldest entries are dropped past this, so the log can't grow unbounded. */
 const LOG_LIMIT = 200
 
-export type GraphLogDescribeStack = [string, string][]
+export type GraphLogDescribeStack = [StackEntry, string][]
 
 export type GraphLogDescribe = {
   stack: GraphLogDescribeStack
@@ -84,9 +85,9 @@ export class Graph {
       entries: [],
       cursor: -1
     }
-    const stack: GraphLogDescribeStack = entries.map((nodeId) => {
-      const url = this.nodes.get(nodeId)?.url ?? "?"
-      return [nodeId, url]
+    const stack: GraphLogDescribeStack = entries.map((e) => {
+      const url = this.nodes.get(e.nodeId)?.url ?? "?"
+      return [e, url]
     })
     const active = this.tabToActiveNode.get(tabId)
     const pending = this.tabToPendingJump.get(tabId)
@@ -182,20 +183,16 @@ export class Graph {
   targetNode(
     tabId: number,
     nodeId: string
-  ): { activeNode: GraphNode; nodeInStack: boolean; delta: number } {
+  ): { targetNode: GraphNode; nodeInStack: boolean; delta: number } {
     const before = this.describe(tabId)
     const { entries, cursor } = this.getStack(tabId)
-    const nodeInStack = entries.includes(nodeId)
-    const newCursor = entries.indexOf(nodeId)
+    const nodeInStack = entries.some((e) => e.nodeId === nodeId)
+    const newCursor = entries.findIndex((e) => e.nodeId === nodeId)
     const delta = newCursor - cursor
 
-    if (nodeInStack) {
-      this.tabToActiveNode.set(tabId, nodeId)
-      this.tabToStack.set(tabId, {
-        entries,
-        cursor: newCursor
-      })
-    } else {
+    // TODO: is this necessary? Shouldn't navigation-tracker be able to send this value back to the
+    // background worker which could handle the pending jump in handleNaviagtionEntry
+    if (!nodeInStack) {
       // Chrome discarded this entry, so it can't be reached by traversal.
       // The caller navigates with chrome.tabs.update, which pushes a fresh
       // history entry; this marker lets the resulting commit recognise the
@@ -210,25 +207,52 @@ export class Graph {
       before,
       `${this.label(nodeId)} ${nodeInStack ? `go(${delta})` : "tabs.update"}`
     )
-    return { activeNode: this.getNode(nodeId), nodeInStack, delta }
+    return { targetNode: this.getNode(nodeId), nodeInStack, delta }
+  }
+
+  handleNavigationEntry(tabId: number, key: string, url: string | null) {
+    const { entries } = this.getStack(tabId)
+    const index = entries.findIndex((e) => e.key === key)
+
+    // CASE 1: Key in stack → move the cursor to it
+    if (index !== -1) {
+      this.tabToStack.set(tabId, { entries, cursor: index })
+      this.tabToActiveNode.set(tabId, entries[index].nodeId)
+      return
+    }
+
+    const jump = this.takePendingJump(tabId)
+
+    // CASE 2: Key not in stack, pending jump with matching URL → pushExisting the marked node into the new slot
+    if (jump && jump.url === url) {
+      this.pushExisting(tabId, jump, key)
+    }
+
+    // CASE 3: Key not in stack, no marker → addNode
+    else {
+      if (!url) {
+        console.warn(
+          "[handleNavigationEntry] addNode cannot called with null URL"
+        )
+      } else {
+        this.addNode(tabId, key, url)
+      }
+    }
   }
 
   /**
    * Adds a **new** node to our url/tab graph.
    * @param tabId ID of tab associated with node
+   * @param key {@link StackEntry.key}
    * @param url URL asscoaited with this node
    */
-  addNode(tabId: number, url: string): GraphNode {
+  addNode(tabId: number, key: string, url: string): GraphNode {
     const before = this.describe(tabId)
     const timestamp = Date.now()
     const id = uuidv4()
 
     const parentNodeId = this.tabToActiveNode.get(tabId) ?? null
 
-    // Deliberately does not touch `tabToPendingJump`. `takePendingJump` is its
-    // only consumer: `addNode` is also reached from NAVIGATION_PUSH, which never
-    // passes through webNavigation, so consuming the marker here would let an
-    // SPA push swallow a jump that has not committed yet.
     const newNode: GraphNode = {
       id,
       tabId: tabId,
@@ -242,7 +266,8 @@ export class Graph {
     this.nodes.set(id, newNode)
     // Add graph to stack, or initialize stack
     const { entries, cursor } = this.getStack(tabId)
-    const newEntries = [...entries.slice(0, cursor + 1), id]
+    const newEntry: StackEntry = { nodeId: id, key }
+    const newEntries = [...entries.slice(0, cursor + 1), newEntry]
     const newCursor = cursor + 1
     this.tabToStack.set(tabId, {
       entries: newEntries,
@@ -262,31 +287,6 @@ export class Graph {
 
     this.record("addNode", tabId, before, url)
     return newNode
-  }
-
-  /**
-   * Moves the cursor one step for a back/forward the *user* performed.
-   *
-   * Do not call this for extension-initiated traversals: `targetNode` already
-   * moves the cursor, and a `history.go()` of any size still produces a single
-   * traverse event, so applying a step here would overshoot.
-   *
-   * @param tabId Undefined when the message arrived without a sender tab.
-   */
-  traverse(tabId: number | undefined, direction: TraverseDirection) {
-    if (!tabId) {
-      console.error("[Graph.traverse] tabId is undefined?")
-      return
-    }
-    const before = this.describe(tabId)
-    const { entries, cursor } = this.getStack(tabId)
-    const delta = direction === "forward" ? 1 : -1
-    const newCursor = cursor + delta
-    const newActiveNodeId = entries[newCursor]
-
-    this.tabToStack.set(tabId, { entries, cursor: newCursor })
-    this.tabToActiveNode.set(tabId, newActiveNodeId)
-    this.record("traverse", tabId, before, direction)
   }
 
   /**
@@ -330,11 +330,12 @@ export class Graph {
    * @param tabId
    * @param node
    */
-  pushExisting(tabId: number, node: GraphNode) {
+  pushExisting(tabId: number, node: GraphNode, key: string) {
     const before = this.describe(tabId)
     // Only update the stack, not the graph
     const { entries, cursor } = this.getStack(tabId)
-    const newEntries = [...entries.slice(0, cursor + 1), node.id]
+    const newEntry: StackEntry = { nodeId: node.id, key }
+    const newEntries = [...entries.slice(0, cursor + 1), newEntry]
     const newCursor = cursor + 1
     this.tabToStack.set(tabId, {
       entries: newEntries,
@@ -344,4 +345,29 @@ export class Graph {
     this.tabToActiveNode.set(tabId, node.id)
     this.record("pushExisting", tabId, before, this.label(node.id))
   }
+
+  // /**
+  //  * Moves the cursor one step for a back/forward the *user* performed.
+  //  *
+  //  * Do not call this for extension-initiated traversals: `targetNode` already
+  //  * moves the cursor, and a `history.go()` of any size still produces a single
+  //  * traverse event, so applying a step here would overshoot.
+  //  *
+  //  * @param tabId Undefined when the message arrived without a sender tab.
+  //  */
+  // traverse(tabId: number | undefined, direction: TraverseDirection) {
+  //   if (!tabId) {
+  //     console.error("[Graph.traverse] tabId is undefined?")
+  //     return
+  //   }
+  //   const before = this.describe(tabId)
+  //   const { entries, cursor } = this.getStack(tabId)
+  //   const delta = direction === "forward" ? 1 : -1
+  //   const newCursor = cursor + delta
+  //   const newActiveNodeId = entries[newCursor]
+
+  //   this.tabToStack.set(tabId, { entries, cursor: newCursor })
+  //   this.tabToActiveNode.set(tabId, newActiveNodeId)
+  //   this.record("traverse", tabId, before, direction)
+  // }
 }
